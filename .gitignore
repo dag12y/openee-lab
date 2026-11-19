@@ -1,0 +1,15 @@
+
+# Local documentation archives
+openee-stage1-docs.tar.gz
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+.next/
+
+# Environment and editor files
+.env
+.env.*
+!.env.example
+.DS_Store

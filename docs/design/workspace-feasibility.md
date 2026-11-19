@@ -6,7 +6,9 @@
 
 ## Minimum useful editor
 
-The smallest useful graph must let a user add supported blocks, configure their parameters, connect compatible ports, identify signal direction, run a valid model, inspect outputs and diagnostics, undo/redo edits, and export/reopen the model. Mere drag-and-drop placement is insufficient. The current proposed block set is **source**, **carrier**, **conventional AM modulator**, and **result/plot**; exact block semantics and whether source/carrier are separate types remain open.
+The smallest useful graph must let a user add supported blocks, configure their parameters, create, remove, and reroute connections between compatible ports, identify signal direction, run a valid model, inspect outputs and diagnostics, undo/redo edits, and export/reopen the model. Mere drag-and-drop placement is insufficient. The current proposed block set is **source**, **carrier**, **conventional AM modulator**, and **result/plot**; exact block semantics and whether source/carrier are separate types remain open.
+
+**Construction threshold:** starting from an empty supported project, a user must be able to choose and place the required block types, connect them into a runnable signal path, deliberately break and repair a connection, change a parameter, and observe the resulting change after a run. Removing or reconnecting a block must update execution semantics or produce a specific validation error. Moving fixed blocks on a canvas, cosmetically rearranging a prewired AM experiment, or editing only parameters does not satisfy FR-005. The first release may restrict block count and topology, but must disclose those constraints and permit meaningful user construction within them; the supported topology remains a Stage 3 decision.
 
 Ports need declared signal type and compatible quantity/unit expectations where applicable. A connection attempt must validate direction, type, multiplicity, and required inputs; rejection should explain the incompatible endpoints. The editor needs an accessible non-pointer path for selecting nodes/ports, creating and removing connections, and reading graph structure. Visual wires and color are supplementary.
 
@@ -33,7 +35,7 @@ Undo/redo must cover add/remove, connect/disconnect, and committed parameter edi
 
 Conduct before confirming the graph in public-release scope. The checkpoint is a design and implementation spike, not an assumption that an available graph library solves the problem. Exit only when reviewers can demonstrate or validate all of the following with a representative conventional AM model:
 
-1. A supported graph can be built, edited, and inspected through pointer and keyboard paths, including typed connection errors.
+1. From an empty project, a user can construct a runnable supported graph, break and repair a connection, and inspect the changed model through pointer and keyboard paths. Reviewers observe a real execution or validation difference from connection edits; moving prewired blocks alone fails this criterion.
 2. The same supported model opens from the built-in simulation without losing parameters, units, sampling configuration, assumptions, or version metadata; unsupported cases fail clearly or require an explicit fork.
 3. A UI-independent simulation path runs the graph and guided model equivalently against approved reference cases and tolerances.
 4. Undo/redo and portable export/import preserve supported graph semantics across a fresh session and self-hosted deployment.
@@ -55,6 +57,22 @@ If any criterion fails, document the failure and return the public-release scope
 - Can the first editor be usable on the approved mobile/tablet support range?
 - Which future DSP capabilities, if any, should constrain the first graph interface?
 - Who approves numerical references, tolerances, accessibility criteria, and the checkpoint outcome?
+
+## Stage 3 technical architecture decision register
+
+The register records decisions to make, not decisions already approved. Stage 1 product principles and requirement priorities remain unchanged. Each decision needs a documented rationale and evidence before implementation or release commitments depend on it.
+
+| ID | Decision to resolve | Evidence / decision gate | Related requirements | Status |
+| --- | --- | --- | --- | --- |
+| D-01 | Numerical reference cases and tolerances for the first model | Independently derived cases, boundary behavior, units, sampling assumptions, and comparison method; audit the separate assignment simulator before reuse | FR-003, FR-006, FR-014; NFR-001–NFR-002 | Open |
+| D-02 | Graph construction boundary and conversion coverage | Enumerate supported blocks, topologies, and model fields; demonstrate faithful built-in-to-workspace conversion or explicit unsupported/fork behavior | FR-005–FR-006, FR-014; NFR-007 | Open; graph feasibility gate |
+| D-03 | Portable project format and version policy | Define what model, metadata, and version data must round-trip; test malformed and unsupported files without replacing work; avoid coupling essential exchange to hosted services | FR-007–FR-009; NFR-002, NFR-006, NFR-008 | Open |
+| D-04 | Resource budgets and failure policy | Measure representative models and devices, then set input, graph, computation, and cancellation limits with clear rejection behavior | NFR-005 | Open |
+| D-05 | Browser and device support | Choose a support matrix using first-release workflows, self-hosted deployment, and graph feasibility evidence; document any device-specific editing limits | NFR-002, NFR-004, NFR-008 | Open |
+| D-06 | Accessibility acceptance standard and evaluation | Approve a release standard; evaluate keyboard, screen-reader, plots, diagnostics, and graph construction against it | NFR-004; FR-005, FR-014 | Open |
+| D-07 | Minimal extension boundary | Decide which internal contracts preserve future editor/engine growth without promising a public plugin API or third-party execution in the MVP | NFR-003, NFR-007; future FR-011–FR-012 | Open |
+
+No numeric tolerance, performance target, browser matrix, resource budget, project schema, or accessibility certification is inferred by this register. If D-02 fails, return the proposed public MVP and graph-dependent P0 requirements to product review rather than silently changing scope.
 
 ## Related documents and traceability
 

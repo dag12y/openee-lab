@@ -1,8 +1,8 @@
-# M0 licensing and dependency proposal
+# M0 licensing and dependency record
 
-**Status:** Proposed for maintainer approval; no repository license or dependency selection is approved.
-**Purpose:** Compare plausible open-source licenses and set a preliminary review policy before implementation.
-**Scope:** T-03 planning. This document does not create a LICENSE file, relicense existing work, or authorize reuse of the separate university simulator.
+**Status:** Apache-2.0 selected by the maintainer for the current repository; dependency policy is preliminary and individual dependencies remain unapproved.
+**Purpose:** Record the license selection, provenance review, and preliminary dependency review policy before implementation.
+**Scope:** T-03 evidence. This decision does not authorize copying or adapting the separate university simulator or lecture PDFs.
 
 ## License comparison
 
@@ -14,11 +14,15 @@
 
 The [FSF compatibility analysis](https://www.gnu.org/licenses/license-compatibility.en.html) describes the direction of Apache-2.0 and GPLv3 compatibility; it is not a blanket permission for every dependency combination. License compatibility depends on how code is combined and distributed. The existing university simulator's license and contributor rights have not been checked, so no code or asset reuse is authorized by this comparison.
 
-## Recommendation for review
+## License decision
 
-**Recommend Apache-2.0** for the planned open core, subject to maintainer approval and a contributor-rights review. It allows academic, commercial, and self-hosted reuse while giving contributors and adopters an explicit patent framework. This fits a platform intended to invite future domain engines and tools without requiring every downstream integration to adopt copyleft. The tradeoff is that downstream forks can be proprietary; if reciprocal publication of distributed changes is a higher priority, GPL-3.0 merits a separate product and legal review. Choosing Apache-2.0 would not make hosted services or plugins part of the public MVP.
+**Maintainer decision: Apache-2.0** is the intended license for OpenEE Lab. It permits academic, commercial, and self-hosted reuse while giving contributors and adopters an explicit patent framework. This fits a platform intended to invite future domain engines and tools without requiring every downstream integration to adopt copyleft. Downstream forks can be proprietary. The selection does not make hosted services or plugins part of the public MVP.
 
-There is currently **no LICENSE file**. Until the copyright holders approve and add one, do not describe the repository as already licensed under Apache-2.0 or import third-party code on the assumption that the recommendation is in force. Determine copyright ownership of existing documentation and any future simulator reuse, then record the approved license and notice practice. A future contributor agreement or sign-off policy is a separate decision; this proposal does not impose one.
+### Copyright and provenance review
+
+The tracked tree was inspected at this decision: it contains project Markdown documentation and `.gitignore`, with no application or university-simulator source, lecture PDFs, downloaded assets, dependency manifests, or third-party notice files. Git history records one contributor email (`dagimyibabe19@gmail.com`) under the names `dagm` and `dagm yibabe`; no other contributor or imported-code provenance appears in the repository history. The maintainer explicitly selected Apache-2.0 for this repository. That evidence is sufficient to add the official [Apache-2.0 license text](../../LICENSE) for the current repository content. Git authorship alone is not a warranty of title; any later third-party material requires its own rights and notice review.
+
+The separate university AM simulator is **not** included in this review and must not be presumed licensed for reuse. The instructor's lecture PDFs were inspected locally for the [assignment scope record](../roadmap/m0-scope-record.md) but are not repository content. Before copying any simulator code, assets, or lecture material, identify its copyright holders, license or permission, third-party components, and required notices. Confirm the preferred copyright-holder wording for future file headers or a NOTICE file if needed; the official LICENSE text itself does not require a project-specific copyright line. A contributor sign-off or agreement policy remains a separate future decision.
 
 ## Preliminary dependency policy
 
@@ -29,4 +33,4 @@ There is currently **no LICENSE file**. Until the copyright holders approve and 
 5. **Compatibility and accessibility:** test a candidate in the approved browser/device matrix and first-release keyboard/screen-reader flows. Do not infer graph feasibility or numerical correctness merely because a library renders graphs or computes FFTs.
 6. **Review record:** each proposed dependency needs its purpose, alternative considered, license/security findings, maintained owner role, version/update plan, and validation impact in its PR. No package is selected or installed by M0.
 
-**T-03 disposition:** License recommendation and dependency criteria are recorded, but license choice, copyright/provenance review, and concrete dependency approvals remain open. Related [open-core scope](../product/scope.md), [implementation boundaries](../architecture/implementation-boundaries.md), [risk register](../roadmap/risk-register.md), and [contribution guidance](../../CONTRIBUTING.md).
+**T-03 disposition:** The maintainer selected Apache-2.0 and the repository-level provenance review supports licensing the current tracked content. The preliminary dependency criteria are recorded; no concrete dependency has been approved. Reuse of the separate simulator remains blocked pending its own provenance audit. D-01 through D-07 retain their evidence-gated statuses. Related [open-core scope](../product/scope.md), [implementation boundaries](../architecture/implementation-boundaries.md), [risk register](../roadmap/risk-register.md), and [contribution guidance](../../CONTRIBUTING.md).

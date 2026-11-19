@@ -1,14 +1,20 @@
 # Documentation
 
-**Status:** Current index for Phase 0, Stage 1.  
-**Purpose:** Navigate the product documentation and explain how to read its decision labels.
+**Status:** Current index for Phase 0, Stages 1 and 2; Stage 2 specifications are proposed.
+**Purpose:** Navigate product and UX documentation and explain how to read its decision labels.
 
 ## Recommended reading order
 
-1. [Product vision](product/vision.md) — users, problem, principles, and long-term direction.
-2. [Product scope](product/scope.md) — proposed first release and explicit boundaries.
-3. [Product requirements](product/requirements.md) — testable requirements and traceability.
-4. [User journeys](product/user-journeys.md) — representative paths through the proposed product.
+1. [Product vision](product/vision.md) — users, principles, and long-term direction.
+2. [Product scope](product/scope.md) — assignment, validation slice, proposed public release, and future boundaries.
+3. [Product requirements](product/requirements.md) — priorities, acceptance criteria, and traceability.
+4. [User journeys](product/user-journeys.md) — representative first-release and future paths.
+5. [Information architecture](design/information-architecture.md) — navigation, screens, and guest entry points.
+6. [Workspace](design/workspace.md) — shell, editing views, lifecycle, and panels.
+7. [Guided labs](design/guided-labs.md) — catalog, experiment controls, results, and workspace transition.
+8. [Interaction flows](design/interaction-flows.md) — actions, system responses, and failures.
+9. [Design system](design/design-system.md) — reusable visual and accessibility guidance.
+10. [Workspace feasibility](design/workspace-feasibility.md) — graph checkpoint and Stage 3 decision register.
 
 The [repository README](../README.md) gives a short introduction and current status.
 

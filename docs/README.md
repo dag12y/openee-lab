@@ -1,7 +1,7 @@
 # Documentation
 
-**Status:** Current index for Phase 0, Stages 1–3; Stage 2 and Stage 3 specifications are proposed.
-**Purpose:** Navigate product, UX, and technical architecture documentation and explain how to read its decision labels.
+**Status:** Current index for Phase 0, Stages 1–4; Stage 2–4 specifications and plans are proposed.
+**Purpose:** Navigate product, UX, architecture, and roadmap documentation and explain how to read its decision labels.
 
 ## Recommended reading order
 
@@ -23,6 +23,12 @@
 16. [Numerical verification](architecture/numerical-verification.md) — independent references and release evidence.
 17. [Architecture decisions](architecture/architecture-decisions.md) — open D-01 through D-07 recommendations and gates.
 18. [Implementation boundaries](architecture/implementation-boundaries.md) — proposed package ownership and first-slice sequence.
+19. [Milestones](roadmap/milestones.md) — ordered evidence and implementation gates.
+20. [Proposed public MVP](roadmap/mvp.md) — bounded capabilities and graph-dependent scope.
+21. [Implementation plan](roadmap/implementation-plan.md) — focused tasks with dependencies and acceptance evidence.
+22. [Validation plan](roadmap/validation-plan.md) — numerical, graph, project, accessibility, browser, and self-hosting gates.
+23. [Risk register](roadmap/risk-register.md) — severity, mitigation, owner roles, and triggers.
+24. [Release plan](roadmap/release-plan.md) — architecture validation through public decision criteria.
 
 The [repository README](../README.md) gives a short introduction and current status.
 

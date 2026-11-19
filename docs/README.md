@@ -1,7 +1,7 @@
 # Documentation
 
-**Status:** Current index for Phase 0, Stages 1 and 2; Stage 2 specifications are proposed.
-**Purpose:** Navigate product and UX documentation and explain how to read its decision labels.
+**Status:** Current index for Phase 0, Stages 1–3; Stage 2 and Stage 3 specifications are proposed.
+**Purpose:** Navigate product, UX, and technical architecture documentation and explain how to read its decision labels.
 
 ## Recommended reading order
 
@@ -15,6 +15,14 @@
 8. [Interaction flows](design/interaction-flows.md) — actions, system responses, and failures.
 9. [Design system](design/design-system.md) — reusable visual and accessibility guidance.
 10. [Workspace feasibility](design/workspace-feasibility.md) — graph checkpoint and Stage 3 decision register.
+11. [Architecture overview](architecture/overview.md) — platform boundaries and dependency direction.
+12. [Simulation engines](architecture/simulation-engines.md) — domain contracts and run lifecycle.
+13. [Batch-first DSP runtime](architecture/dsp-engine.md) — candidate communication execution path and AM reference.
+14. [Portable project format](architecture/project-format.md) — canonical model exchange and compatibility.
+15. [Progressive extensibility](architecture/extensibility.md) — built-ins through future plugins and external engines.
+16. [Numerical verification](architecture/numerical-verification.md) — independent references and release evidence.
+17. [Architecture decisions](architecture/architecture-decisions.md) — open D-01 through D-07 recommendations and gates.
+18. [Implementation boundaries](architecture/implementation-boundaries.md) — proposed package ownership and first-slice sequence.
 
 The [repository README](../README.md) gives a short introduction and current status.
 

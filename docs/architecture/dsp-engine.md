@@ -49,7 +49,21 @@ Before frequency plots become authoritative, specify transform sign, normalizati
 
 ## Conventional AM integration
 
-The candidate model should explicitly define its modulation equation and amplitude convention, parameter domains, carrier/message relationship, sample rate, duration, and expected outputs. A guided lab and supported graph compile to the same engine-level model or demonstrably equivalent requests; their outputs are compared against independent analytical references. The existing university simulator is an audit candidate, not the oracle. DSB-SC, SSB, and VSB may enter the separate assignment integration path after audit; they are not automatic public-MVP nodes.
+**Proposed, unverified analytical reference for one conventional AM convention:**
+
+$$
+s(t)=A_c[1+\mu\cos(2\pi f_m t)]\cos(2\pi f_c t).
+$$
+
+Here `A_c` is carrier peak amplitude in the output signal unit, `μ` is a dimensionless modulation index, and `f_m` and `f_c` are message and carrier frequencies in hertz. The baseline reference case uses `A_c > 0`, `0 ≤ μ ≤ 1`, `0 < f_m < f_c`, and finite positive frequencies. `μ > 1` is a proposed overmodulation warning case, not an approved input policy; `A_c = 0`, `μ = 0`, and coincident/zero frequencies are boundary cases with explicitly derived expectations or validation outcomes. This equation is **not** a universal AM convention.
+
+Stage 1 FR-002 also calls for editable message amplitude. Under this reference, a guided message-amplitude quantity `A_m` can map to `μ = k_a A_m`, where `k_a` has inverse units of `A_m` and is fixed/documented by the model. The value and whether users edit `A_m`, `μ`, or both without overdetermination remain D-01/D-02 decisions. Another common parameterization uses an additive message term, such as `[A_c + k A_m cos(2πf_m t)]cos(2πf_c t)`; it matches the displayed reference only when `A_c > 0` and `μ = k A_m/A_c`. Do not compare parameter values across these conventions without that mapping.
+
+For a finite batch, propose `f_s > 0`, integer `N > 0`, `t_n = n/f_s` for `n = 0, …, N−1`, and duration `T = N/f_s`; the endpoint `T` is excluded. Then `s[n] = A_c[1+μ cos(2πf_m n/f_s)]cos(2πf_c n/f_s)`. For distinct unaliased lines, require the strict Nyquist condition `f_s > 2(f_c+f_m)`; equality is a boundary case, not a clean pass. This condition does not remove finite-record leakage. With coherent integer-cycle choices (`N f_m/f_s` and `N f_c/f_s` integers) and a rectangular window, ideal line comparisons are simplest; otherwise verify leakage under the chosen FFT/window convention.
+
+Using `cos a cos b = [cos(a+b)+cos(a−b)]/2`, the ideal continuous signal has a carrier at `f_c` with peak cosine amplitude `A_c` and sidebands at `f_c−f_m` and `f_c+f_m`, each with peak cosine amplitude `A_c μ/2`. In a two-sided complex Fourier representation, each positive/negative carrier coefficient has magnitude `A_c/2`, and each positive/negative sideband coefficient has magnitude `A_c μ/4`, assuming distinct lines. Plot scaling must state whether it shows one-sided peak amplitude, two-sided coefficients, or power. At `μ = 0`, sidebands vanish; at `μ = 1`, the ideal envelope reaches zero; at `μ > 1`, it crosses zero and envelope interpretation changes. At `A_c = 0`, the signal is zero under this parameterization, unlike some additive-amplitude conventions. The existing university simulator is an audit candidate, not the oracle. DSB-SC, SSB, and VSB may enter the separate assignment integration path after audit; they are not automatic public-MVP nodes.
+
+A built-in definition instantiates the canonical communication model; a guided control edits a mapped model field. A user-constructed graph owns its own nodes, edges, and parameters in that same domain model. The compiler derives a transient plan; equal canonical models must compile to equivalent plan semantics and outputs under D-01 criteria, while a rewired graph can intentionally differ. The graph feasibility gate D-02 must prove the mapping and reject unsupported conversions without silent loss.
 
 ## Alternatives, open questions, and traceability
 

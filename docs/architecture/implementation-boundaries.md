@@ -27,8 +27,8 @@ These are logical ownership boundaries, not a required build tool or package-man
 | `contracts` | Domain/model identifiers, run/result envelopes, diagnostics, capability descriptors | AM equations, UI components, universal graph schema |
 | `project` | Safe data parsing, format/version checks, migrations if approved, export | Engine execution, hosted accounts, trusted interpretation of arbitrary file code |
 | `simulation-core` | Run lifecycle, resource/cancellation hooks, numerical primitives | DOM, routing, graph canvas |
-| `engine-communications` | Communication model validation, AM behavior, provenance | React/Vue/etc. components, editor layout |
-| `editor-communications` | Model-to-guided/graph mappings and supported conversion coverage | Numerical source of truth |
+| `engine-communications` | Canonical communication model and graph semantics, validation, AM behavior, provenance | React/Vue/etc. components, editor layout |
+| `editor-communications` | Built-in-definition-to-model recipe, guided field mappings, graph interaction adapter, supported conversion coverage | Canonical model ownership or numerical source of truth |
 | `apps/web` and `ui` | Navigation, controls, plots, accessibility, worker coordination | Hidden scientific formulas or canonical project semantics |
 
 **Public versus internal:** portable project format and documented model semantics are user-facing compatibility commitments once approved. Internal TypeScript interfaces may evolve during the first slice. No public plugin SDK, extension loading contract, or remote-engine API is promised. Future third-party capability requires security and version governance under D-07.

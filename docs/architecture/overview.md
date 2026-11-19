@@ -27,7 +27,19 @@ The **browser application** owns routing, accessible controls, plots, selection,
 
 ## Model and editor separation
 
-An experiment definition declares a supported domain model, defaults, metadata, and presentation guidance. A guided lab and a specialized workspace editor inspect or edit that same model, or use an explicitly checked conversion. The first communication editor may use a typed signal graph. A circuit editor might use a schematic/netlist and a controls editor a state-space or block representation. The engine contract carries a domain identifier and versioned model payload; it does not require a universal graph. Model-to-editor adapters have explicit support predicates and lossless-conversion claims. If a predicate fails, the UI explains the unsupported mapping or offers an explicit, reviewed fork; it never silently omits semantics (FR-014).
+**Proposed ownership for the first communication slice:** the communication domain package owns the versioned canonical model, parameter/quantity definitions, graph semantics, and validation rules. A built-in guided simulation definition owns its catalog text, teaching sequence, defaults, and a deterministic recipe that instantiates a supported canonical model; it does not own a separate numerical formula. Guided controls edit mapped fields in that model. The communication graph editor owns interaction and layout, while graph nodes, connections, and parameters that affect simulation are canonical model data. Users can construct a graph from an empty project; they are not limited to rearranging a built-in template. A compiler derives an execution plan from a validated model; the plan is transient and never the project's source of truth. Portable export stores the canonical model plus optional editor layout, not a compiled plan or authoritative result.
+
+```mermaid
+flowchart LR
+  LAB[Built-in guided definition] -->|instantiate/edit mapped fields| MODEL[Canonical communication model]
+  EDIT[Editable communication graph] <-->|edit graph semantics| MODEL
+  MODEL -->|validate and compile| PLAN[Transient execution plan]
+  PLAN --> ENGINE[Communication engine]
+  MODEL <-->|export/import| FILE[Portable project data]
+  EDIT -. layout only .-> FILE
+```
+
+For the built-in topology, guided and graph routes refer to the same canonical fields and compile to the same plan semantics. Equivalence means matching model identity/version, parameter values, units, sampling assumptions, and results within later-approved D-01 tolerances; it does **not** claim that arbitrary user-constructed graphs equal the guided experiment. A graph with different connections is a different canonical model and must change execution or produce validation diagnostics. An editor adapter reports complete supported coverage, or a structured unsupported result with an inventory of fields it cannot preserve. Unsupported conversion leaves the source intact; an explicit fork requires a visible semantic change summary and user consent (FR-014). A circuit editor might use a schematic/netlist and a controls editor a state-space representation. No future domain must use this communication graph.
 
 ## Dependency direction
 

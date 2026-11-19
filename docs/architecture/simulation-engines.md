@@ -6,40 +6,58 @@
 
 ## Contract shape
 
-Illustrative TypeScript-style contract, **not production code or an approved API**:
+Illustrative TypeScript-style contract, **not production code or an approved API**. The exact serialization, fingerprint, and cancellation types remain open:
 
 ```ts
 type ModelRef = { domain: string; kind: string; modelVersion: string };
-type RunRequest<Model> = {
-  modelRef: ModelRef;
-  model: Model;                 // validated domain payload, never editor layout
-  runRevision: string;
-  engineVersion: string;
-  sampling?: SamplingMetadata; // domain-defined when applicable
-  requestedOutputs: string[];
-};
+type EngineRef = { engineId: string; engineVersion: string };
+type Quantity = { value: number; unit: string }; // domain validates dimensions
+type Sampling = { sampleRate: Quantity; sampleCount: number; startTime: Quantity };
 type Diagnostic = {
   severity: "info" | "warning" | "error";
-  code: string;
-  message: string;
-  location?: { elementId?: string; field?: string };
+  code: string; message: string;
+  location?: { elementId?: string; portId?: string; field?: string };
+  remedy?: string;
 };
-type RunResult<Output> = {
-  requestRevision: string;
-  modelRef: ModelRef;
-  engineVersion: string;
-  outputs: Output;
-  diagnostics: Diagnostic[];
-  provenance: { sampling?: SamplingMetadata; assumptions: string[] };
+type ValidatedInput<Model> = Readonly<{
+  modelRef: ModelRef; model: Readonly<Model>;  // canonical domain snapshot
+  sampling?: Sampling;                        // resolved, when applicable
+  assumptions: readonly string[];
+  inputFingerprint: string;                   // exact snapshot identity
+}>;
+type RunRequest<Model> = Readonly<{
+  runId: string; modelRevision: string; engine: EngineRef;
+  input: ValidatedInput<Model>; requestedOutputs: readonly string[];
+}>;
+type RunContext = {
+  runId: string; modelRevision: string; modelRef: ModelRef;
+  engine: EngineRef; inputFingerprint?: string; // absent if pre-run validation fails
 };
+type RunProvenance = RunContext & {
+  inputFingerprint: string; sampling?: Sampling;
+  assumptions: readonly string[];
+};
+type RunOutcome<Output> =
+  | { status: "success"; provenance: RunProvenance;
+      outputs: Output; outputUnits: Record<string, string>;
+      diagnostics: readonly Diagnostic[] }
+  | { status: "rejected"; context: RunContext;
+      diagnostics: readonly Diagnostic[] }
+  | { status: "cancelled"; context: RunContext;
+      diagnostics: readonly Diagnostic[] }
+  | { status: "failed"; context: RunContext;
+      diagnostics: readonly Diagnostic[] };
 interface DomainEngine<Model, Output> {
-  supports(ref: ModelRef): boolean;
-  validate(model: Model): Diagnostic[];
-  run(request: RunRequest<Model>, cancellation: Cancellation): Promise<RunResult<Output>>;
+  supports(model: ModelRef, engine: EngineRef): boolean;
+  validate(model: Model, ref: ModelRef):
+    | { ok: true; input: ValidatedInput<Model> }
+    | { ok: false; diagnostics: readonly Diagnostic[] };
+  run(request: RunRequest<Model>, cancellation: Cancellation):
+    Promise<RunOutcome<Output>>;
 }
 ```
 
-The envelope is shared; `Model`, `Output`, and validation rules are domain-specific. A circuit engine need not accept a signal graph. Units and quantities should be explicit in domain models, not inferred from plot labels. Runtime input validation must not assume UI validation succeeded. Diagnostics have stable codes and model locations for accessible presentation; a thrown exception becomes a controlled run failure, never a successful result.
+The envelope is shared; `Model`, `Output`, sampling applicability, and validation rules are domain-specific. A circuit engine need not accept a signal graph. Units and quantities are explicit in domain models and result descriptors, not inferred from plot labels. The immutable `ValidatedInput` is a conceptual snapshot: implementation must enforce immutability across worker or process boundaries and reject mutation or mismatched fingerprints. Fingerprint algorithm and serialization are D-03 details; the intent is stable identity of exact validated inputs, not a security signature. Runtime validation must not assume UI validation succeeded. Diagnostics have stable codes and model locations for accessible presentation. Only `success` contains outputs; validation/resource rejection, acknowledged cancellation, and unexpected execution failure cannot masquerade as successful results.
 
 ## Registry and lifecycle
 
@@ -56,11 +74,11 @@ stateDiagram-v2
   Running --> Cancelled: cancellation acknowledged
 ```
 
-The application assigns a model revision before dispatch. A request is immutable once queued. Editing while running marks the prior run stale; a late response is associated with its original revision and cannot become the current result. Cancellation is cooperative and best effort, with an explicit cancelled state. A resource guard checks sizes and estimated work before dispatch; the execution environment enforces elapsed work or memory limits where possible. D-04 must set actual budgets after measurement. No percent progress is fabricated when the engine cannot report it.
+The application assigns a model revision and unique run ID before validation; the engine descriptor supplies the implementation version. If validation fails, the application returns a rejected outcome with context and diagnostics but no input fingerprint or outputs. Validation success produces an immutable input snapshot, then the application queues a request referencing that snapshot. The engine rechecks trust-boundary and budget conditions before execution. Editing while running changes the current model revision and marks the prior result stale; a late response is associated with its original revision and cannot become the current result. Cancellation is cooperative and best effort, with an explicit cancelled outcome when acknowledged; an engine failure while cancellation is pending is still a failure. The UI owns current/stale presentation, not the numerical engine. A resource guard checks sizes and estimated work before dispatch; the execution environment enforces elapsed work or memory limits where possible. D-04 must set actual budgets after measurement. No percent progress is fabricated when the engine cannot report it.
 
 ## Reproducibility and versions
 
-Each result identifies model kind/version, engine implementation version, inputs, sampling configuration, units, assumptions, and requested outputs. Stable ordering and defined numerical conventions are preferred. Exact bit identity across browsers is not assumed; D-01 establishes comparison methods and tolerances after evidence. Model migrations are explicit and separate from engine execution. Results are derived artifacts, not the canonical project model.
+Each successful result carries provenance referencing the exact validated input snapshot by fingerprint, model/run revision, model and engine identity/version, resolved sampling, and assumptions. The request holds the canonical input values and requested outputs; the result need not duplicate the entire model, but must expose output units and enough provenance to retrieve or record that snapshot. A rejected, cancelled, or failed outcome carries model/engine identity, correlation IDs, and diagnostics, never outputs; a pre-validation rejection has no fingerprint. Stable ordering and defined numerical conventions are preferred. Exact bit identity across browsers is not assumed; D-01 establishes comparison methods and tolerances after evidence. Model migrations are explicit and separate from engine execution. Results are derived artifacts, not the canonical project model.
 
 ## Editor and engine compatibility
 

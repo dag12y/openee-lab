@@ -34,6 +34,7 @@
 27. [T-07 conventional AM engine](verification/am-engine.md) — batch execution, validation policy, and numerical evidence.
 28. [T-08 simulation run lifecycle](verification/run-lifecycle.md) — worker dispatch, cancellation, and result eligibility.
 29. [Chapter 1 shared numerics](verification/ch1-shared-numerics.md) — sampling and spectrum conventions, team ownership, and experiment integration.
+30. [CH1-F01 web foundation](verification/ch1-web-foundation.md) — guided AM lab, browser execution, and student feature integration.
 
 The [repository README](../README.md) gives a short introduction and current status.
 

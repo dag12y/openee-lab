@@ -1,0 +1,21 @@
+# Engineering decision evidence log
+
+**Status:** Open M0 tracking record; no D-01 through D-07 decision is Accepted.
+**Purpose:** Name the evidence and reviewer role needed to turn Stage 3 recommendations into implementation decisions.
+**Scope:** Decision tracking for the candidate communication slice and proposed public MVP. Entries point to the authoritative [Stage 3 decision analysis](../architecture/architecture-decisions.md); this log does not replace it.
+
+| ID / current status | Evidence required | Responsible reviewer role | Dependencies | Acceptance criterion |
+| --- | --- | --- | --- | --- |
+| D-01 / Open | Audited model convention, units, sampling/FFT rules, independent analytical and boundary cases, university simulator audit disposition, cross-browser comparisons, proposed per-output tolerances | Numerical lead with independent technical reviewer | Assignment audit T-04 before code reuse; candidate model T-05; V-01–V-03 | Reviewer signs a reference matrix and tolerances supported by independent evidence; no simulator-as-oracle assumption |
+| D-02 / Open | From-empty typed graph construction; changed execution/validation after connection edit; complete guided-to-graph field inventory; undo/redo, keyboard path, failure recovery, and provisional versioned fresh-session/self-hosted round trip | Workspace lead plus accessibility and numerical reviewers | D-01 comparison criteria; M3 T-12–T-17; V-04–V-05 | All [Stage 2 checkpoint criteria](../design/workspace-feasibility.md#recommended-feasibility-checkpoint) pass; otherwise product scope review, not a silent P0 downgrade |
+| D-03 / Open | Reviewed production project schema/version and migration policy; canonical model versus layout/results separation; transactional malformed/incompatible import; secure file limits; self-hosted round trips | Project-format lead with security reviewer | M3 provisional proof T-15 informs, but does not approve, production T-18–T-19; V-06 | Reviewer approves documented compatibility behavior and safe round-trip evidence for supported files |
+| D-04 / Open | Representative workload and device measurements; proposed input, graph, file, compute, and cancellation budgets; safe rejection/failure tests | Runtime lead with security reviewer | Integrated model/graph and candidate D-05 devices; T-21; V-07 | Reviewer approves measured limits and recovery behavior; no numeric budget is assumed here |
+| D-05 / Open | Proposed browser/device support matrix; guest, lab, graph, import/export, worker, and numerical comparison results | Compatibility lead with product reviewer | M4 integrated flow; D-04 measurements; T-22; V-08 | Reviewer approves a truthful support matrix and documented device limitations |
+| D-06 / Open | Selected accessibility standard and manual/automated results for keyboard, screen reader, graph, plots, diagnostics, and file flows | Accessibility lead with product reviewer | D-02 graph path, D-05 candidate devices, T-23, V-09 | Reviewer accepts the standard and evidence for first-release journeys; design intent alone is insufficient |
+| D-07 / Open | First-slice dependency boundary review; non-graph domain paper exercise; self-hosting check; future hostile-plugin threat model before any third-party execution | Architecture lead with security reviewer | T-06 contract, M4 integration, T-24, V-10; no public plugin API in MVP | Reviewer accepts minimal internal extension boundaries without requiring a universal graph or proprietary service |
+
+## Evidence handling
+
+For each decision, attach the test procedure or review record, model and environment versions where relevant, observed outcomes, reviewer role, date of review, and any remaining conditions. A recommendation, merged document, or passing spike is not itself acceptance. Keep the Stage 3 status **Open** until evidence is reviewed and an explicit decision is recorded. D-01 through D-03 gate graph-dependent first-release scope; D-04 through D-06 gate release claims. D-07 may remain an internal recommendation while public plugin execution stays future.
+
+**T-02: Tracking structure created; decision evidence and named reviewers are pending.** Related [Stage 1 requirements](../product/requirements.md), [validation gates](../roadmap/validation-plan.md), and [implementation tasks](../roadmap/implementation-plan.md).

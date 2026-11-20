@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { chromium } from "playwright-core";
-import { preview } from "vite";
+import { createServer, preview } from "vite";
 
 let browser, server, origin;
 before(async () => {
@@ -33,7 +33,7 @@ test("guest keyboard navigation, default Live run and automatic output updates",
     await page.getByLabel("Sample count").fill("2049");
     await page.getByText("This batch is limited to 2048 samples.", { exact: true }).waitFor();
     assert.equal(await page.getByLabel("Sample count").getAttribute("aria-invalid"), "true");
-    await page.getByRole("button", { name: "Reset" }).click();
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
     assert.equal(await page.getByLabel("Sample count").inputValue(), "320");
     await page.getByRole("spinbutton", { name: "Carrier amplitude" }).fill("4");
     await page.locator("figcaption").nth(1).getByText(/largest absolute value 4 at 400/).waitFor();
@@ -54,7 +54,7 @@ test("guest keyboard navigation, default Live run and automatic output updates",
     assert.equal(await page.getByText(/Previous result/).isVisible(), false);
     await page.getByRole("spinbutton", { name: "Carrier amplitude" }).fill("0");
     await page.locator("figcaption").nth(0).getByText(/largest absolute value 0 at 0/).waitFor();
-    await page.getByRole("button", { name: "Reset" }).click();
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
     await page.locator("figcaption").nth(1).getByText(/largest absolute value 2 at 400/).waitFor();
     await page.getByLabel("Carrier frequency").fill("2500");
     await page.getByText(/sampled spectrum folds frequencies/).waitFor();
@@ -159,7 +159,12 @@ test("Live coalesces edits and Manual suppresses automatic workers, including re
     assert.equal(await page.evaluate(() => window.testWorkers[1].request.model.carrierAmplitude), 12.375);
     assert.equal(await input.inputValue(), "12.375");
     assert.equal(await slider.inputValue(), "10");
-    await slider.fill("5.25");
+    await slider.evaluate(node => {
+      for (const value of ["1.25", "2.5", "5.25"]) {
+        node.value = value;
+        node.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
     assert.equal(await input.inputValue(), "5.25");
     await page.clock.runFor(220);
     assert.equal(await page.evaluate(() => window.testWorkers[2].request.model.carrierAmplitude), 5.25);
@@ -171,11 +176,132 @@ test("Live coalesces edits and Manual suppresses automatic workers, including re
     await page.getByLabel("Simulation mode").selectOption("manual");
     await input.fill("7");
     await page.clock.runFor(220);
-    await page.getByRole("button", { name: "Reset" }).click();
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
     await page.clock.runFor(220);
     assert.equal(await input.inputValue(), "2");
     assert.equal(await page.evaluate(() => window.testWorkers.length), 3);
     await page.getByRole("button", { name: "Run simulation" }).click();
     assert.equal(await page.evaluate(() => window.testWorkers[3].request.model.carrierAmplitude), 2);
   } finally { await page.close(); }
+});
+
+test("scope playback moves only the display cursor, pauses, and stops on exit", async () => {
+  const page = await browser.newPage();
+  try {
+    await page.addInitScript(() => {
+      window.frames = new Set();
+      const request = requestAnimationFrame.bind(window);
+      const cancel = cancelAnimationFrame.bind(window);
+      window.requestAnimationFrame = callback => {
+        const id = request(time => { window.frames.delete(id); callback(time); });
+        window.frames.add(id);
+        return id;
+      };
+      window.cancelAnimationFrame = id => { window.frames.delete(id); cancel(id); };
+    });
+    await page.goto(origin + "/#/labs/conventional-am");
+    const scope = page.locator("figure").first();
+    const canvas = scope.locator("canvas");
+    const pixels = () => canvas.evaluate(node => node.toDataURL());
+    await page.waitForFunction(() => document.querySelector("canvas")?.width > 300);
+    const original = await pixels();
+    const summary = await scope.locator("figcaption").innerText();
+    await scope.getByRole("button", { name: "Play cursor" }).click();
+    await scope.getByLabel("Cursor playback speed").selectOption("4");
+    await page.waitForFunction(start => document.querySelector("canvas").toDataURL() !== start, original);
+    await page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { configurable: true, value: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    assert.equal(await page.evaluate(() => window.frames.size), 0);
+    await page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { configurable: true, value: false });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await scope.getByRole("button", { name: "Pause cursor" }).click();
+    await page.waitForFunction(() => window.frames.size === 0);
+    const paused = await pixels();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await pixels(), paused);
+    assert.equal(await scope.locator("figcaption").innerText(), summary);
+    await scope.getByRole("button", { name: "Play cursor" }).click();
+    await page.getByRole("link", { name: "Guided simulations" }).click();
+    await page.getByRole("heading", { name: "Guided simulations" }).waitFor();
+    assert.equal(await page.evaluate(() => window.frames.size), 0);
+  } finally { await page.close(); }
+});
+
+test("zoom and pan inspect actual coordinates, DPR follows size, and reduced motion disables playback", async () => {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 800 },
+    deviceScaleFactor: 2, reducedMotion: "reduce", colorScheme: "dark" });
+  try {
+    await page.goto(origin + "/#/labs/conventional-am");
+    const scope = page.locator("figure").first();
+    const spectrum = page.locator("figure").nth(1);
+    const canvas = scope.locator("canvas");
+    assert.equal(await scope.getByRole("button", { name: "Play cursor" }).isDisabled(), true);
+    await page.waitForFunction(() => {
+      const canvas = document.querySelector("canvas");
+      return canvas && canvas.width === Math.round(canvas.getBoundingClientRect().width * 2);
+    });
+    const initialWidth = await canvas.evaluate(node => node.width);
+    const inspect = scope.getByRole("slider", { name: "Waveform inspect position" });
+    await inspect.focus();
+    await inspect.press("Home");
+    assert.match(await scope.locator(".plot-readout").innerText(), /Time \(s\) 0, Voltage \(V\) 3/);
+    await scope.getByRole("button", { name: "Zoom in" }).click();
+    await inspect.focus();
+    await inspect.press("Home");
+    assert.match(await scope.locator(".plot-readout").innerText(), /Time \(s\) 0.02,/);
+    await scope.getByRole("button", { name: "Pan right" }).click();
+    await inspect.focus();
+    await inspect.press("Home");
+    assert.match(await scope.locator(".plot-readout").innerText(), /Time \(s\) 0.03,/);
+    await scope.getByRole("button", { name: "Reset view" }).click();
+    await inspect.focus();
+    await inspect.press("Home");
+    assert.match(await scope.locator(".plot-readout").innerText(), /Time \(s\) 0,/);
+    const spectrumInspect = spectrum.getByRole("slider", { name: "Amplitude spectrum inspect position" });
+    await spectrumInspect.fill("200");
+    assert.match(await spectrum.locator(".plot-readout").innerText(), /Frequency \(Hz\) 400, Peak amplitude \(V\) 2/);
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.waitForFunction(oldWidth => {
+      const canvas = document.querySelector("canvas");
+      return canvas && canvas.width !== oldWidth && canvas.width === Math.round(canvas.getBoundingClientRect().width * 2);
+    }, initialWidth);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  } finally { await page.close(); }
+});
+
+test("multiple traces use their own coordinates and preserve original buffers", async () => {
+  const dev = await createServer({ server: { host: "127.0.0.1", port: 0 } });
+  const page = await browser.newPage();
+  try {
+    await dev.listen();
+    await page.goto(`http://127.0.0.1:${dev.httpServer.address().port}`);
+    await page.evaluate(async () => {
+      const { createScientificPlot } = await import("/src/scientific-plot.ts");
+      const plot = createScientificPlot({ title: "Overlay fixture", xLabel: "Time (s)", yLabel: "V" });
+      const a = Float64Array.of(1, 2, 3);
+      const b = Float64Array.of(30, 20, 10);
+      plot.setTraces([
+        { label: "Uniform", values: a, axis: { start: 0, step: 1 }, mode: "line" },
+        { label: "Explicit", color: "#ff0000", values: b, axis: { coordinates: Float64Array.of(0, 0.4, 2) }, mode: "line" },
+      ]);
+      document.body.append(plot.root);
+      window.verifyFixture = () => {
+        const canvas = plot.root.querySelector("canvas");
+        const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+        const hasOverlay = data.some((value, i) => i % 4 === 0 && value === 255 &&
+          data[i + 1] === 0 && data[i + 2] === 0 && data[i + 3] > 0);
+        plot.dispose();
+        return { hasOverlay, a: [...a], b: [...b] };
+      };
+    });
+    const plot = page.locator("figure").filter({ hasText: "Overlay fixture" });
+    await plot.getByRole("slider").fill("200");
+    assert.match(await plot.locator(".plot-readout").innerText(), /Uniform: Time \(s\) 0, V 1 · Explicit: Time \(s\) 0.4, V 20/);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.deepEqual(await page.evaluate(() => window.verifyFixture()), { hasOverlay: true, a: [1, 2, 3], b: [30, 20, 10] });
+  } finally { await page.close(); await dev.close(); }
 });

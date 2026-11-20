@@ -78,3 +78,11 @@ canvas { display: block; width: 100%; height: auto; }
 .previous-result { color: var(--muted); background: var(--raised); border: 1px solid var(--border); border-radius: 7px; padding: .4rem .65rem; }
 .diagnostics { color: var(--muted); font-size: .85rem; }
 .diagnostic-error { color: var(--error); }
+.scientific-plot canvas { height: clamp(12rem, 28vw, 17rem); }
+.plot-controls { display: flex; flex-wrap: wrap; gap: .3rem; margin: .45rem 0; }
+.plot-controls button, .plot-controls select { font: inherit; font-size: .8rem; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: 6px; padding: .24rem .5rem; }
+.plot-legend { display: flex; flex-wrap: wrap; gap: .7rem; list-style: none; padding: 0; margin: .2rem 0; font-size: .8rem; }
+.plot-legend li::before { content: ""; display: inline-block; width: 1rem; border-top: 2px solid var(--series-color); margin-right: .35rem; vertical-align: middle; }
+.plot-legend li:nth-child(even)::before { border-top-style: dashed; }
+.scientific-plot input[type=range] { width: 100%; accent-color: var(--action); }
+.plot-readout { font-size: .8rem; color: var(--muted); min-height: 1.5em; }

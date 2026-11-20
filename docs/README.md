@@ -1,6 +1,6 @@
 # Documentation
 
-**Status:** Current index for Phase 0, Stages 1–4; Stage 2–4 specifications and plans are proposed.
+**Status:** Current index for Phase 0, Stages 1–4, and the proposed M1/T-05 analytical reference; Stage 2–4 specifications and plans are proposed.
 **Purpose:** Navigate product, UX, architecture, and roadmap documentation and explain how to read its decision labels.
 
 ## Recommended reading order
@@ -29,6 +29,7 @@
 22. [Validation plan](roadmap/validation-plan.md) — numerical, graph, project, accessibility, browser, and self-hosting gates.
 23. [Risk register](roadmap/risk-register.md) — severity, mitigation, owner roles, and triggers.
 24. [Release plan](roadmap/release-plan.md) — architecture validation through public decision criteria.
+25. [T-05 AM numerical reference](verification/am-reference.md) — executable analytical fixtures and evidence still required for D-01.
 
 The [repository README](../README.md) gives a short introduction and current status.
 

@@ -4,6 +4,8 @@ import { createBrowserExecution } from "./browser-adapter";
 import { plot } from "./plot";
 import { actions, diagnostics, element, numericField } from "./ui";
 
+const previewDelayMs = 200;
+
 const parameters = [
   ["carrierAmplitude", "Carrier amplitude", "V", 2, "Peak voltage, ≥ 0"],
   ["modulationIndex", "Modulation index", "1", 0.5, "Dimensionless, ≥ 0"],
@@ -18,6 +20,8 @@ export function mountAmLab(root: HTMLElement): () => void {
   const controller = new RunController(adapter.execute);
   let active: string | undefined;
   let mounted = true;
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  let hasResult = false;
 
   const header = element("header", undefined, "lab-heading");
   const title = element("h1", "Conventional AM");
@@ -29,7 +33,29 @@ export function mountAmLab(root: HTMLElement): () => void {
   form.noValidate = true;
   form.append(element("h2", "Parameters"));
   const fields = parameters.map(([key, label, unit, value, hint]) =>
-    ({ key, label, value, ...numericField(key, label, unit, value, hint) }));
+    ({ key, label, unit, value, ...numericField(key, label, unit, value, hint) }));
+  const modeLabel = element("label", "Simulation mode", "mode-control");
+  const mode = element("select");
+  for (const label of ["Live", "Manual"]) {
+    const option = element("option", label);
+    option.value = label.toLowerCase();
+    mode.append(option);
+  }
+  modeLabel.append(mode);
+  form.append(modeLabel);
+  const sliders = fields.flatMap(field => {
+    if (field.key !== "carrierAmplitude" && field.key !== "modulationIndex") return [];
+    const slider = element("input");
+    slider.type = "range";
+    slider.min = "0";
+    slider.max = field.key === "carrierAmplitude" ? "10" : "2";
+    slider.step = "any";
+    slider.setAttribute("aria-label", field.label + " quick adjustment");
+    const hint = element("small");
+    field.root.append(slider, hint);
+    slider.addEventListener("input", () => { field.input.value = slider.value; });
+    return [{ field, slider, hint }];
+  });
   fields.forEach(field => form.append(field.root));
   const buttons = actions();
   form.append(buttons.root);
@@ -45,84 +71,142 @@ export function mountAmLab(root: HTMLElement): () => void {
   messages.setAttribute("aria-live", "polite");
   const results = element("section", undefined, "panel traces");
   const traces = element("div");
-  results.append(element("h2", "Signal readout"), feedback, messages, traces);
+  const stale = element("p", "Previous result · Parameters or run status changed.", "previous-result");
+  stale.hidden = true;
+  traces.setAttribute("aria-describedby", "am-result-status");
+  stale.id = "am-result-status";
+  results.append(element("h2", "Signal readout"), feedback, messages, stale, traces);
   const empty = (message: string) => traces.replaceChildren(element("p", message, "empty"));
   empty("Waveform and spectrum appear here after a run.");
   right.append(results, model);
   layout.append(form, right);
   root.append(header, layout);
 
-  function invalidate(text: string) {
-    if (active) controller.cancel(active);
-    active = undefined;
-    controller.edit();
-    buttons.run.disabled = false;
-    buttons.cancel.hidden = true;
-    diagnostics(messages, []);
-    fields.forEach(field => field.error());
-    feedback.textContent = text;
-    empty("Run the current parameters to view results.");
+  function clearPreview() {
+    clearTimeout(pending);
+    pending = undefined;
   }
 
-  form.addEventListener("input", () => invalidate("Parameters changed. Run again for current results."));
-  buttons.reset.addEventListener("click", () => {
-    fields.forEach(field => { field.input.value = String(field.value); });
-    invalidate("Defaults restored. Run to inspect the default signal.");
-  });
-  buttons.cancel.addEventListener("click", () => {
-    if (!active) return;
-    feedback.textContent = "Stopping worker…";
-    controller.cancel(active);
-    buttons.run.focus();
-  });
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (active) return;
+  function status(text: string) {
+    if (feedback.textContent !== text) feedback.textContent = text;
+  }
+
+  function setBusy(busy: boolean) {
+    buttons.run.disabled = busy;
+    if (!busy && document.activeElement === buttons.cancel) buttons.run.focus();
+    buttons.cancel.hidden = !busy;
+  }
+
+  function syncSliders() {
+    for (const { field, slider, hint } of sliders) {
+      const value = field.input.valueAsNumber;
+      slider.value = Number.isFinite(value) ? field.input.value : String(field.value);
+      hint.textContent = Number.isFinite(value) && value > Number(slider.max)
+        ? "Above the quick adjustment range. The exact value is used."
+        : "";
+    }
+  }
+
+  function readModel(focusError = false): AmModel | undefined {
     const invalid = fields.filter(({ input }) => !Number.isFinite(input.valueAsNumber));
     fields.forEach(field => field.error(invalid.includes(field) ? "Enter a finite number." : undefined));
+    diagnostics(messages, []);
     if (invalid.length) {
-      feedback.textContent = "Check the highlighted parameters.";
-      invalid[0]!.input.focus();
+      status("Check the highlighted parameters.");
+      if (focusError) invalid[0]!.input.focus();
       return;
     }
     const values = Object.fromEntries(fields.map(field => [field.key, field.input.valueAsNumber])) as AmModel;
     const validation = amEngine.validate(values, amModelRef);
     if (!validation.ok) {
-      feedback.textContent = "Check the highlighted parameters.";
-      diagnostics(messages, validation.diagnostics);
+      status("Check the highlighted parameters.");
       let first: HTMLInputElement | undefined;
       for (const issue of validation.diagnostics) {
         const field = fields.find(candidate => candidate.key === issue.location?.field);
         if (field) { field.error(issue.message); first ??= field.input; }
       }
-      first?.focus();
+      if (!first) diagnostics(messages, validation.diagnostics);
+      if (focusError) first?.focus();
       return;
     }
+    return values;
+  }
+
+  function schedule(values: AmModel) {
+    status("Updating preview…");
+    pending = setTimeout(() => {
+      pending = undefined;
+      void execute(values);
+    }, previewDelayMs);
+  }
+
+  function parametersChanged(manualText: string) {
+    clearPreview();
+    if (active) controller.cancel(active);
+    active = undefined;
+    controller.edit();
+    setBusy(false);
+    stale.hidden = !hasResult;
+    syncSliders();
+    const values = readModel();
+    if (!values) return;
+    if (mode.value === "live") schedule(values);
+    else status(manualText);
+  }
+
+  form.addEventListener("input", event => {
+    if (event.target !== mode) parametersChanged("Parameters changed. Run to update the results.");
+  });
+  mode.addEventListener("change", () => {
+    clearPreview();
+    if (active) return;
+    if (mode.value === "manual") {
+      if (controller.current) status("Manual mode. Current result shown.");
+      else if (readModel()) status("Manual mode. Run when ready.");
+    } else {
+      const values = readModel();
+      if (values) schedule(values);
+    }
+  });
+  buttons.reset.addEventListener("click", () => {
+    fields.forEach(field => { field.input.value = String(field.value); });
+    parametersChanged("Defaults restored. Run to update the results.");
+  });
+  buttons.cancel.addEventListener("click", () => {
+    if (!active) return;
+    status("Stopping worker…");
+    controller.cancel(active);
+  });
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    if (active) return;
+    clearPreview();
+    const values = readModel(true);
+    if (values) void execute(values);
+  });
+
+  async function execute(values: AmModel) {
+    if (!mounted || active) return;
     const run = controller.submit(values, ["waveform", "spectrum"]);
     active = run;
-    buttons.run.disabled = true;
-    buttons.cancel.hidden = false;
-    feedback.textContent = "Running simulation…";
+    setBusy(true);
+    stale.hidden = !hasResult;
+    status("Updating preview…");
     diagnostics(messages, []);
-    empty("Computing waveform and spectrum.");
     const outcome = await controller.completed(run);
     if (!mounted || active !== run) return;
     active = undefined;
-    buttons.run.disabled = false;
-    if (document.activeElement === buttons.cancel) buttons.run.focus();
-    buttons.cancel.hidden = true;
+    setBusy(false);
     diagnostics(messages, outcome.diagnostics);
     const current = controller.current;
     if (outcome.status !== "success" || current?.provenance.runId !== run) {
-      feedback.textContent = outcome.status === "cancelled" ? "Run cancelled." : "Run did not complete.";
-      empty("Run the simulation to view results.");
+      status(outcome.status === "cancelled" ? "Run cancelled." : "Run did not complete. Run again to retry.");
       return;
     }
     const { waveform, spectrum, sampleRateHz, sampleCount } = current.outputs;
-    feedback.textContent = `Run ${run} · Revision ${current.provenance.modelRevision} · ${sampleCount} samples`;
+    status(`Run ${run} · Revision ${current.provenance.modelRevision} · ${sampleCount} samples`);
     const metadata = element("dl", undefined, "metadata");
-    fields.forEach(({ key, label }) => {
-      const unit = parameters.find(parameter => parameter[0] === key)![2];
+    fields.forEach(({ key, label, unit }) => {
       metadata.append(element("dt", label), element("dd", `${values[key]} ${unit}`));
     });
     const views: HTMLElement[] = [];
@@ -130,13 +214,20 @@ export function mountAmLab(root: HTMLElement): () => void {
       step: 1 / sampleRateHz, values: waveform, mode: "line" }));
     if (spectrum) views.push(plot({ title: "Amplitude spectrum", xLabel: "Frequency (Hz)", yLabel: "Peak amplitude (V)",
       step: spectrum.binWidthHz, values: spectrum.peakAmplitude, mode: "stems" }));
-    views.push(element("p", "One-sided peak amplitudes · rectangular record · DC and Nyquist undoubled.", "muted"),
+    views.push(element("p", "One-sided peak amplitudes · rectangular record.", "muted"),
       element("p", `Model ${current.provenance.modelRef.kind} v${current.provenance.modelRef.modelVersion} · Engine v${current.provenance.engine.engineVersion}`, "muted"),
       metadata);
     traces.replaceChildren(...views);
-  });
+    hasResult = true;
+    stale.hidden = true;
+  }
+
+  syncSliders();
+  const defaults = readModel();
+  if (defaults) void execute(defaults);
   return () => {
     mounted = false;
+    clearPreview();
     if (active) controller.cancel(active);
     adapter.dispose();
   };

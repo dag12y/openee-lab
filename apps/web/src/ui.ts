@@ -24,7 +24,8 @@ export function numericField(key: string, label: string, unit: string, value: nu
   box.append(input, element("span", unit));
   root.append(name, box, note);
   return { root, input, error(message?: string) {
-    note.textContent = message ?? hint;
+    const text = message ?? hint;
+    if (note.textContent !== text) note.textContent = text;
     if (message) input.setAttribute("aria-invalid", "true");
     else input.removeAttribute("aria-invalid");
   } };
@@ -44,5 +45,5 @@ export function actions() {
 
 export function diagnostics(container: HTMLElement, items: readonly Diagnostic[]) {
   container.replaceChildren(...items.map(item =>
-    element("li", `${item.severity}: ${item.message}${item.remedy ? " " + item.remedy : ""}`)));
+    element("li", `${item.severity}: ${item.message}${item.remedy ? " " + item.remedy : ""}`, `diagnostic-${item.severity}`)));
 }

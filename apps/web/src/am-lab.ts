@@ -1,10 +1,10 @@
 import { amEngine, amModelRef, maxSamples, type AmModel } from "../../../packages/engine-communications/src/index.js";
 import { RunController } from "../../../packages/simulation-core/src/index.js";
 import { createBrowserExecution } from "./browser-adapter";
-import { plot } from "./plot";
+import { createScientificPlot } from "./scientific-plot";
 import { actions, diagnostics, element, numericField } from "./ui";
 
-const previewDelayMs = 200;
+const previewDelayMs = 155;
 
 const parameters = [
   ["carrierAmplitude", "Carrier amplitude", "V", 2, "Peak voltage, ≥ 0"],
@@ -22,6 +22,9 @@ export function mountAmLab(root: HTMLElement): () => void {
   let mounted = true;
   let pending: ReturnType<typeof setTimeout> | undefined;
   let hasResult = false;
+  const scope = createScientificPlot({ title: "Waveform", xLabel: "Time (s)", yLabel: "Voltage (V)", playback: true });
+  const analyzer = createScientificPlot({ title: "Amplitude spectrum", xLabel: "Frequency (Hz)", yLabel: "Peak amplitude (V)" });
+  const details = element("div");
 
   const header = element("header", undefined, "lab-heading");
   const title = element("h1", "Conventional AM");
@@ -209,15 +212,18 @@ export function mountAmLab(root: HTMLElement): () => void {
     fields.forEach(({ key, label, unit }) => {
       metadata.append(element("dt", label), element("dd", `${values[key]} ${unit}`));
     });
-    const views: HTMLElement[] = [];
-    if (waveform) views.push(plot({ title: "Waveform", xLabel: "Time (s)", yLabel: "Voltage (V)",
-      step: 1 / sampleRateHz, values: waveform, mode: "line" }));
-    if (spectrum) views.push(plot({ title: "Amplitude spectrum", xLabel: "Frequency (Hz)", yLabel: "Peak amplitude (V)",
-      step: spectrum.binWidthHz, values: spectrum.peakAmplitude, mode: "stems" }));
-    views.push(element("p", "One-sided peak amplitudes · rectangular record.", "muted"),
+    if (waveform) scope.setTraces([{
+      label: "AM signal", axis: { start: current.outputs.startTimeSeconds, step: 1 / sampleRateHz },
+      values: waveform, mode: "line",
+    }]);
+    if (spectrum) analyzer.setTraces([{
+      label: "AM spectrum", axis: { start: 0, step: spectrum.binWidthHz },
+      values: spectrum.peakAmplitude, mode: "stems",
+    }]);
+    details.replaceChildren(element("p", "One-sided peak amplitudes · rectangular record.", "muted"),
       element("p", `Model ${current.provenance.modelRef.kind} v${current.provenance.modelRef.modelVersion} · Engine v${current.provenance.engine.engineVersion}`, "muted"),
       metadata);
-    traces.replaceChildren(...views);
+    if (!hasResult) traces.replaceChildren(scope.root, analyzer.root, details);
     hasResult = true;
     stale.hidden = true;
   }
@@ -230,5 +236,7 @@ export function mountAmLab(root: HTMLElement): () => void {
     clearPreview();
     if (active) controller.cancel(active);
     adapter.dispose();
+    scope.dispose();
+    analyzer.dispose();
   };
 }

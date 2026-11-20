@@ -30,6 +30,7 @@
 23. [Risk register](roadmap/risk-register.md) — severity, mitigation, owner roles, and triggers.
 24. [Release plan](roadmap/release-plan.md) — architecture validation through public decision criteria.
 25. [T-05 AM numerical reference](verification/am-reference.md) — executable analytical fixtures and evidence still required for D-01.
+26. [T-06 simulation contracts](verification/simulation-contracts.md) — internal request, snapshot, provenance, and outcome design.
 
 The [repository README](../README.md) gives a short introduction and current status.
 

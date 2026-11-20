@@ -1,0 +1,19 @@
+{
+  "name": "@openee-lab/numerics",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/packages/numerics/src/numerics.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3"
+  },
+  "main": "./dist/packages/numerics/src/index.js",
+  "types": "./dist/packages/numerics/src/index.d.ts"
+}

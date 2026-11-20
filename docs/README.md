@@ -32,6 +32,7 @@
 25. [T-05 AM numerical reference](verification/am-reference.md) — executable analytical fixtures and evidence still required for D-01.
 26. [T-06 simulation contracts](verification/simulation-contracts.md) — internal request, snapshot, provenance, and outcome design.
 27. [T-07 conventional AM engine](verification/am-engine.md) — batch execution, validation policy, and numerical evidence.
+28. [T-08 simulation run lifecycle](verification/run-lifecycle.md) — worker dispatch, cancellation, and result eligibility.
 
 The [repository README](../README.md) gives a short introduction and current status.
 

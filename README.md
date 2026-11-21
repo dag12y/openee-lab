@@ -25,3 +25,4 @@ Start with the [documentation guide](docs/README.md). The [product vision](docs/
 Planning documents are ready for implementation review; they do not establish numerical correctness, accessibility compliance, or release readiness. The seven technical decisions [D-01–D-07](docs/architecture/architecture-decisions.md) remain open pending implementation and validation evidence. The separate university AM simulator covers conventional AM, DSB-SC, SSB, and VSB, but its numerical correctness and architecture have not been audited. Assignment integration may include those modes after audit; the public MVP does not automatically inherit them.
 
 Feedback on scope, learning outcomes, acceptance criteria, numerical validation, accessibility, and self-hosting is welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the documentation and pull-request workflow. Proposed decisions require review before they become implementation commitments.
+trial

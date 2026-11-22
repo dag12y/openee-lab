@@ -152,3 +152,17 @@ test('3D surface grid generates finite heights and positive maxAbsHeight', () =>
     assert.ok(Number.isFinite(grid.heights[i]));
   }
 });
+
+test('Discrete convolution respects supports beyond legacy fixed summation limits', () => {
+  const x = { ...defaultDiscreteX(), preset: 'impulse' as const, shift: 50, amplitude: 3 };
+  const h = { ...defaultDiscreteH(), preset: 'impulse' as const, shift: -4, amplitude: 2 };
+  assert.equal(evalDiscreteConvolutionAt(46, x, h), 6);
+  assert.equal(evalDiscreteConvolutionAt(45, x, h), 0);
+});
+
+test('Continuous convolution integrates shifted pulses outside legacy bounds', () => {
+  const x = { ...defaultContinuousX(), preset: 'rect' as const, shift: 30, width: 2, amplitude: 1 };
+  const h = { ...defaultContinuousH(), preset: 'rect' as const, shift: -4, width: 2, amplitude: 1 };
+  assert.ok(Math.abs(evalContinuousConvolutionAt(26, x, h).value - 2) < 0.02);
+  assert.ok(Math.abs(evalContinuousConvolutionAt(27, x, h).value - 1) < 0.02);
+});

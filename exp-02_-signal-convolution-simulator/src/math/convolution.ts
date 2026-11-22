@@ -266,8 +266,29 @@ export function evalContinuousIntegrandAt(
  * - delta * delta -> impulse at t0_x + t0_h with weight A_x * A_h
  * - delta * h -> A_x * h(t - t0_x)
  * - x * delta -> A_h * x(t - t0_h)
- * - regular * regular -> composite Simpson / midpoint numerical integration over [-14, 14]
+ * - regular * regular -> composite midpoint integration over the intersection of finite supports
  */
+/** Finite support of the regular continuous presets. */
+export function continuousSupport(p: ContinuousSignalParams): [number, number] {
+  if (p.preset === 'impulse') return [p.shift, p.shift];
+  if (p.preset === 'exp') return [p.shift, p.shift + Math.max(0.1, p.width)];
+  const halfWidth = p.preset === 'rect' || p.preset === 'triangle' ||
+    p.preset === 'sine' || p.preset === 'bipolar' || p.preset === 'sinc'
+    ? Math.max(0.05, p.width * 0.5)
+    : p.width * 0.5;
+  return [p.shift - halfWidth, p.shift + halfWidth];
+}
+
+/** Inclusive bounds containing every nonzero discrete sample for a preset. */
+export function discreteSupport(p: DiscreteSignalParams): [number, number] {
+  const center = Math.round(p.shift);
+  if (p.preset === 'impulse') return [center, center];
+  const len = Math.max(1, Math.round(p.length));
+  if (p.preset === 'exp') return [center, center + len - 1];
+  if (p.preset === 'double' && len === 2) return [center - 1, center + 1];
+  return [center - Math.floor((len - 1) / 2), center + Math.ceil((len - 1) / 2)];
+}
+
 export function evalContinuousConvolutionAt(
   t: number,
   x: ContinuousSignalParams,
@@ -301,9 +322,13 @@ export function evalContinuousConvolutionAt(
     };
   }
 
-  // Numerical integration using fine composite midpoint rule over [-14, 14]
-  const intMin = -14;
-  const intMax = 14;
+  // Integrate over the actual support of x and the shifted support of h.
+  // All current regular presets have finite support.
+  const xSupport = continuousSupport(x);
+  const hSupport = continuousSupport(h);
+  const intMin = Math.max(xSupport[0], t - hSupport[1]);
+  const intMax = Math.min(xSupport[1], t - hSupport[0]);
+  if (intMax <= intMin) return { value: 0, impulse: null };
   const dTau = (intMax - intMin) / numSteps;
   let sum = 0;
   for (let i = 0; i < numSteps; i++) {
@@ -484,7 +509,7 @@ export function evalDiscreteSignal(
 }
 
 /**
- * Computes exact discrete convolution y[n] = sum_{k=-24}^{24} x[k] * h[n - k].
+ * Computes finite-support discrete convolution y[n] = sum_k x[k] * h[n - k].
  */
 export function evalDiscreteConvolutionAt(
   n: number,
@@ -493,7 +518,11 @@ export function evalDiscreteConvolutionAt(
 ): number {
   const nInt = Math.round(n);
   let sum = 0;
-  for (let k = -32; k <= 32; k++) {
+  const [xMin, xMax] = discreteSupport(x);
+  const [hMin, hMax] = discreteSupport(h);
+  const from = Math.max(xMin, nInt - hMax);
+  const to = Math.min(xMax, nInt - hMin);
+  for (let k = from; k <= to; k++) {
     sum += evalDiscreteSignal(k, x) * evalDiscreteSignal(nInt - k, h);
   }
   return sum;

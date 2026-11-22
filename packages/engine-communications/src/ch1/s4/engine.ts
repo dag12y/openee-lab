@@ -216,15 +216,29 @@ export const ftEngine: DomainEngine<FtModelSnapshot, FtOutput> = {
     if (sidedness !== "one-sided" && sidedness !== "two-sided") {
       return { ok: false, diagnostics: [mkError("invalid-sidedness", "Sidedness must be \"one-sided\" or \"two-sided\".", "sidedness")] };
     }
+    // Reject malformed values before canonicalizing. Number(...) would otherwise
+    // silently accept null, booleans, and numeric strings; null components throw.
+    if (typeof sampleRateHz !== "number" || typeof sampleCount !== "number") {
+      return { ok: false, diagnostics: [mkError("invalid-sampling", "Sampling values must be numbers.", "sampleRateHz")] };
+    }
+    if (!Array.isArray(components)) {
+      return { ok: false, diagnostics: [mkError("invalid-components", "Components must be an array.", "components")] };
+    }
+    for (let i = 0; i < components.length; i++) {
+      const c: unknown = components[i];
+      if (typeof c !== "object" || c === null || Array.isArray(c) ||
+          typeof (c as Record<string, unknown>).amplitudeV !== "number" ||
+          typeof (c as Record<string, unknown>).frequencyHz !== "number") {
+        return { ok: false, diagnostics: [mkError("invalid-component", `Component ${i} must contain numeric amplitudeV and frequencyHz.`, "components")] };
+      }
+    }
     const canonical: FtModel = {
-      components: Array.isArray(components)
-        ? (components as { amplitudeV: number; frequencyHz: number }[]).map(c => ({
-            amplitudeV: Number(c.amplitudeV),
-            frequencyHz: Number(c.frequencyHz),
-          }))
-        : [],
-      sampleRateHz: Number(sampleRateHz),
-      sampleCount: Number(sampleCount),
+      components: components.map(c => ({
+        amplitudeV: c.amplitudeV,
+        frequencyHz: c.frequencyHz,
+      })),
+      sampleRateHz,
+      sampleCount,
       sidedness,
     };
     const issue = validateModel(canonical);

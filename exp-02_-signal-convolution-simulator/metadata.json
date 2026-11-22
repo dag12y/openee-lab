@@ -1,0 +1,6 @@
+{
+  "name": "EXP 02: Signal Convolution Simulator",
+  "description": "Interactive Signal Convolution Simulator with Continuous, Discrete, and 3D Spatial convolution views.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

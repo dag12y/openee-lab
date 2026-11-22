@@ -2,14 +2,19 @@
   "name": "@openee-lab/web",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": { "node": ">=22" },
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0 --port 3000",
+    "lint": "tsc --noEmit",
     "test": "npm run build && node --test tests/browser.test.mjs"
   },
+  "dependencies": {
+    "katex": "^0.19.1"
+  },
   "devDependencies": {
+    "@types/katex": "^0.16.8",
     "playwright-core": "1.65.1",
     "typescript": "5.9.3",
     "vite": "8.3.8"

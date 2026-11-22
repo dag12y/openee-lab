@@ -1,20 +1,30 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Signal Convolution Simulator
 
-# Run and deploy your AI Studio app
+Standalone educational prototype contributed to OpenEE Lab. The main platform application is in `apps/web`; this experiment is not yet integrated into its navigation or shared simulation contracts.
 
-This contains everything you need to run your app locally.
+## Run locally
 
-View your app in AI Studio: https://ai.studio/apps/0b19af43-162a-4e0b-843d-be3c8326c942
+Requires a Node.js version supporting TypeScript type stripping for the included test command.
 
-## Run Locally
+```bash
+npm install
+npm run dev
+npm run check
+npm test
+npm run build
+```
 
-**Prerequisites:**  Node.js
+The signal and image processing calculations are local; no Gemini API key is needed for these calculations.
 
+## Modes
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- Continuous-time convolution with numerical midpoint integration and analytical Dirac impulse sifting.
+- Discrete-time finite-support convolution.
+- 3D visualization of the overlap integrand (Dirac impulses are illustrated with Gaussian ridges, not exact distributions).
+- Image filtering with 3×3 kernels, boundary choices, and per-pixel inspection.
+
+## Mathematical conventions and limitations
+
+Continuous regular signals are finite-window presets; integration uses the overlap of their supports. Numerical accuracy depends on the midpoint sample count and discontinuities. Discrete signals are finite-support presets and sums are bounded by their support. Image kernels are applied without reversal (cross-correlation convention); asymmetric custom kernels are therefore not strict mathematical convolution. Image values are mapped to 8-bit channels, which can clip signed responses.
+
+The 3D mode is illustrative rather than an independent numerical solver. The experiment has not yet been integrated with the platform's shared contracts, worker execution, or validation framework. Run the checks and review the output before relying on numerical results.

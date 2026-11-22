@@ -4,13 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test dist/packages/engine-communications/src/am.test.js",
-    "test:s4": "npm run build && node --test dist/packages/engine-communications/src/ch1/s4/engine.test.js",
-    "test:all": "npm run build && node --test dist/packages/engine-communications/src/am.test.js dist/packages/engine-communications/src/ch1/s4/engine.test.js"
+    "test": "npm run build && node --test dist/packages/engine-communications/src/am.test.js dist/packages/engine-communications/src/ch1/s3/fourier.test.js"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

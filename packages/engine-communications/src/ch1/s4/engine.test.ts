@@ -418,3 +418,30 @@ test("DC plus coherent tone: bins isolated correctly", async () => {
   close(amplitude[1]!, 1, "1 Hz");
   close(amplitude[2]!, 0, "2 Hz");
 });
+
+test("invalid: malformed components return diagnostics without throwing", () => {
+  const base = { sampleRateHz: 8, sampleCount: 8, sidedness: "one-sided" };
+  for (const components of [
+    [null], [undefined], [true], [3], ["tone"], [[]],
+    [{ amplitudeV: "1", frequencyHz: 1 }],
+    [{ amplitudeV: null, frequencyHz: 1 }],
+    [{ amplitudeV: 1, frequencyHz: "1" }],
+    [{ amplitudeV: 1 }],
+  ]) {
+    const result = ftEngine.validate({ ...base, components }, ftModelRef);
+    assert.equal(result.ok, false, `should reject ${String(components)}`);
+  }
+  for (const grid of [{ sampleRateHz: "8" }, { sampleCount: "8" }, { sampleRateHz: null }, { sampleCount: true }]) {
+    const result = ftEngine.validate({ ...base, components: [{ amplitudeV: 1, frequencyHz: 1 }], ...grid }, ftModelRef);
+    assert.equal(result.ok, false);
+  }
+});
+
+test("odd sample count: one-sided bin count and Nyquist convention", async () => {
+  const out = await runOk({
+    components: [{ amplitudeV: 1, frequencyHz: 2 }],
+    sampleRateHz: 5, sampleCount: 5, sidedness: "one-sided",
+  }, ["spectrum"]);
+  assert.equal(out.spectrum!.amplitude.length, 3);
+  close(out.spectrum!.amplitude[2]!, 1, "odd-N highest positive bin is doubled");
+});

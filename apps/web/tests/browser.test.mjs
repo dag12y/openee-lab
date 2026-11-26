@@ -305,3 +305,89 @@ test("multiple traces use their own coordinates and preserve original buffers", 
     assert.deepEqual(await page.evaluate(() => window.verifyFixture()), { hasOverlay: true, a: [1, 2, 3], b: [30, 20, 10] });
   } finally { await page.close(); await dev.close(); }
 });
+
+test("random-process lab switches models, updates PDFs, and exposes model-based checks", async () => {
+  const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
+  try {
+    await page.goto(origin + "/#/labs/random-processes");
+    const process = page.getByLabel("Process model");
+    const generate = page.getByRole("button", { name: "Generate ensemble" });
+    await page.getByRole("heading", { name: "Random processes" }).waitFor();
+    assert.ok(await page.locator(".scientific-plot figcaption .katex").count() >= 1);
+    assert.ok(await page.locator(".random-property .katex").count() >= 1);
+    await page.getByRole("tab", { name: "Stationarity & ergodicity" }).click();
+    await process.selectOption("gaussian");
+    await generate.click();
+    await page.getByText("NO · model").first().waitFor();
+    assert.equal(await page.getByText("PASS · model").count(), 2);
+    assert.equal(await page.getByText("ACF ergodicity").count(), 1);
+    assert.equal(await page.locator(".random-explanation .katex").count(), 1);
+
+    await process.selectOption("poisson");
+    await generate.click();
+    await page.getByText("N/A · nonstationary").first().waitFor();
+    assert.equal(await page.getByText("FAIL · model").count(), 2);
+
+    await page.getByRole("tab", { name: "Statistics" }).click();
+    const inspectLabel = await page.locator(".scientific-plot input[type=range]").first().getAttribute("aria-label");
+    assert.doesNotMatch(inspectLabel, /\\[a-z]/i);
+    await page.getByLabel("PDF sample position").fill("40");
+    assert.equal(await page.locator("output").innerText(), "n = 40");
+    assert.equal(await page.locator(".random-heatmap").count(), 0);
+    assert.equal(await page.locator(".random-scatter").count(), 1);
+
+    await process.selectOption("markov");
+    assert.equal(await page.getByLabel("Transition probability p00").count(), 1);
+    assert.equal(await page.getByLabel("Transition probability p11").count(), 1);
+    await page.getByRole("tab", { name: "Stationarity & ergodicity" }).click();
+    await generate.click();
+    await page.getByText(/Markov chain.*24 paths/).waitFor();
+    assert.equal(await page.getByText("PASS · model").count(), 2);
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
+    await page.getByLabel("Amplitude").waitFor();
+    const samples = page.getByRole("spinbutton", { name: "Samples N" });
+    assert.equal(await samples.inputValue(), "320");
+    assert.equal(await page.getByLabel("Correlation lag ℓ").inputValue(), "8");
+    assert.equal(await page.getByLabel("Amplitude").count(), 1);
+    await samples.fill("128");
+    const lag = page.getByLabel("Correlation lag ℓ");
+    await lag.fill("33");
+    await generate.click();
+    assert.equal(await lag.getAttribute("aria-invalid"), "true");
+    assert.match(await page.getByRole("status").innerText(), /Lag must be/);
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
+
+    await page.setViewportSize({ width: 375, height: 800 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  } finally { await page.close(); }
+});
+
+test("random-process animation loops the signal, pauses, resets, and respects reduced motion", async () => {
+  const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
+  try {
+    await page.goto(origin + "/#/labs/random-processes");
+    const plot = page.locator(".looping-signal-plot canvas");
+    await page.waitForFunction(() => document.querySelector(".looping-signal-plot canvas")?.width > 0 &&
+      document.querySelector(".random-status")?.textContent?.includes("Random-phase"));
+    const initial = await plot.evaluate(canvas => canvas.toDataURL());
+    await page.getByRole("button", { name: "Play signals" }).click();
+    await page.waitForTimeout(500);
+    assert.notEqual(await plot.evaluate(canvas => canvas.toDataURL()), initial);
+    await page.getByRole("button", { name: "Pause signals" }).click();
+    const paused = await plot.evaluate(canvas => canvas.toDataURL());
+    await page.waitForTimeout(250);
+    assert.equal(await plot.evaluate((canvas, image) => canvas.toDataURL() === image, paused), true);
+    await page.getByLabel("Animation speed").selectOption("2");
+    await page.getByRole("button", { name: "Restart animation" }).click();
+    assert.equal(await page.getByRole("button", { name: "Play signals" }).getAttribute("aria-pressed"), "false");
+    assert.equal(await plot.evaluate((canvas, image) => canvas.toDataURL() === image, initial), true);
+    assert.equal(await page.locator(".random-sync-source").count(), 0);
+  } finally { await page.close(); }
+
+  const reduced = await browser.newPage({ reducedMotion: "reduce" });
+  try {
+    await reduced.goto(origin + "/#/labs/random-processes");
+    await reduced.getByRole("button", { name: "Play signals" }).waitFor();
+    assert.equal(await reduced.getByRole("button", { name: "Play signals" }).isDisabled(), true);
+  } finally { await reduced.close(); }
+});

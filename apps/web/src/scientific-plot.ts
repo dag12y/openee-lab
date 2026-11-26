@@ -1,4 +1,5 @@
 import { element } from "./ui";
+import { plainMathText, renderMathText } from "./math-text";
 
 /** The producer owns finite samples and ascending coordinates with matching lengths.
  * Keep these buffers unchanged while the plot uses them.
@@ -30,11 +31,14 @@ function lowerBound(trace: ScientificTrace, value: number): number {
 }
 
 export function createScientificPlot(options: ScientificPlotOptions) {
+  const plainTitle = plainMathText(options.title);
+  const plainXLabel = plainMathText(options.xLabel);
+  const plainYLabel = plainMathText(options.yLabel);
   const root = element("figure", undefined, "plot scientific-plot");
   const caption = element("figcaption");
   const summary = element("p", "", "summary");
   const legend = element("ul", undefined, "plot-legend");
-  caption.append(element("strong", options.title), summary, legend);
+  caption.append(renderMathText(element("strong"), options.title), summary, legend);
   const controls = element("div", undefined, "plot-controls");
   const canvas = element("canvas");
   canvas.setAttribute("aria-hidden", "true");
@@ -44,7 +48,7 @@ export function createScientificPlot(options: ScientificPlotOptions) {
   inspect.min = "0";
   inspect.max = "1000";
   inspect.value = "0";
-  inspect.setAttribute("aria-label", options.title + " inspect position");
+  inspect.setAttribute("aria-label", plainTitle + " inspect position");
 
   const events = new AbortController();
   const listener = { signal: events.signal };
@@ -133,7 +137,8 @@ export function createScientificPlot(options: ScientificPlotOptions) {
   button("Pan left", () => shift(-1));
   button("Pan right", () => shift(1));
   button("Reset view", () => { zoom = 1; pan = 0; cursor = 0; bounds(); clearInspection(); });
-  root.append(caption, controls, element("div", options.yLabel, "axis-label"), canvas, inspect, readout);
+  root.append(caption, controls, renderMathText(element("div", undefined, "axis-label"), options.yLabel),
+    canvas, inspect, readout);
   updatePlayback();
 
   function showInspection(fraction: number) {
@@ -145,7 +150,7 @@ export function createScientificPlot(options: ScientificPlotOptions) {
       const before = Math.max(0, after - 1);
       const index = Math.abs(xAt(trace, before) - target) < Math.abs(xAt(trace, after) - target) ? before : after;
       if (series === 0) { crossX = xAt(trace, index); crossY = trace.values[index]!; }
-      return `${trace.label}: ${options.xLabel} ${format(xAt(trace, index))}, ${options.yLabel} ${format(trace.values[index]!)}`;
+      return `${trace.label}: ${plainXLabel} ${format(xAt(trace, index))}, ${plainYLabel} ${format(trace.values[index]!)}`;
     });
     readout.textContent = readings.join(" · ");
     inspect.setAttribute("aria-valuetext", readout.textContent);
@@ -321,7 +326,7 @@ export function createScientificPlot(options: ScientificPlotOptions) {
           high = Math.max(high, value);
           if (Math.abs(value) > Math.abs(trace.values[peak]!)) peak = i;
         });
-        return `${trace.label} · ${trace.values.length} values · largest absolute value ${format(trace.values[peak]!)} at ${format(xAt(trace, peak))}. ${options.xLabel} / ${options.yLabel}.`;
+        return `${trace.label} · ${trace.values.length} values · largest absolute value ${format(trace.values[peak]!)} at ${format(xAt(trace, peak))}. ${plainXLabel} / ${plainYLabel}.`;
       });
       if (!traces.length) minX = maxX = 0;
       summary.textContent = summaries.join(" ");

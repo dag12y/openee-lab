@@ -36,6 +36,7 @@
 29. [Chapter 1 shared numerics](verification/ch1-shared-numerics.md) — sampling and spectrum conventions, team ownership, and experiment integration.
 30. [CH1-F01 web foundation](verification/ch1-web-foundation.md) — guided AM lab, browser execution, and student feature integration.
 31. [CH1-F02 scientific visualization](verification/ch1-realtime-visualization.md) — reusable plots, cursor playback, and performance observations.
+32. [CH1 random-processes lab](verification/ch1-random-processes.md) — process models, ensemble analysis, correlation, stationarity, and ergodicity.
 
 The [repository README](../README.md) gives a short introduction and current status.
 

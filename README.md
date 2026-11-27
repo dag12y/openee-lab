@@ -1,6 +1,6 @@
 # OpenEE Lab
 
-**Status:** Phase 0 planning documentation (Stages 1–4) is complete and merged. Platform implementation has not started; no OpenEE Lab features are implemented in this repository.
+**Status:** Phase 0 planning documentation (Stages 1–4) is complete and merged. The `apps/web` prototype now includes a Conventional AM lab and a Chapter 1 Random Processes lab; broader platform features and numerical/accessibility validation remain in progress.
 
 OpenEE Lab is an open-source, extensible, browser-based electrical engineering platform in planning. Its intended scope spans engineering work, simulation, extension, community exchange, and learning. Communication systems are the first proposed working domain, not the platform's identity.
 

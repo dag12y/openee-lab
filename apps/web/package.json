@@ -7,11 +7,14 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "npm run build && node --test tests/browser.test.mjs"
+    "test": "npm run build && node --test tests/random-processes.test.mjs tests/browser.test.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.65.1",
     "typescript": "5.9.3",
     "vite": "8.3.8"
+  },
+  "dependencies": {
+    "katex": "^0.19.1"
   }
 }

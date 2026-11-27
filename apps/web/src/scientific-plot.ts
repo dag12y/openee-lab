@@ -1,4 +1,5 @@
 import { element } from "./ui";
+import { plainMathText, renderMathText } from "./math-text";
 
 /** The producer owns finite samples and ascending coordinates with matching lengths.
  * Keep these buffers unchanged while the plot uses them.
@@ -15,6 +16,8 @@ export type ScientificPlotOptions = {
 };
 
 const format = (value: number) => Number(value.toPrecision(4)).toString();
+const MIN_ZOOM = 1 / 8;
+const MAX_ZOOM = 256;
 const xAt = (trace: ScientificTrace, index: number): number =>
   "coordinates" in trace.axis ? trace.axis.coordinates[index]! :
     trace.axis.start + index * trace.axis.step;
@@ -30,21 +33,24 @@ function lowerBound(trace: ScientificTrace, value: number): number {
 }
 
 export function createScientificPlot(options: ScientificPlotOptions) {
+  const plainTitle = plainMathText(options.title);
+  const plainXLabel = plainMathText(options.xLabel);
+  const plainYLabel = plainMathText(options.yLabel);
   const root = element("figure", undefined, "plot scientific-plot");
   const caption = element("figcaption");
   const summary = element("p", "", "summary");
   const legend = element("ul", undefined, "plot-legend");
-  caption.append(element("strong", options.title), summary, legend);
+  caption.append(renderMathText(element("strong"), options.title), summary, legend);
   const controls = element("div", undefined, "plot-controls");
   const canvas = element("canvas");
   canvas.setAttribute("aria-hidden", "true");
-  const readout = element("p", "Move over the chart or use Inspect position.", "plot-readout");
+  const readout = element("div", "Move over the chart or use Inspect position.", "plot-readout");
   const inspect = element("input");
   inspect.type = "range";
   inspect.min = "0";
   inspect.max = "1000";
   inspect.value = "0";
-  inspect.setAttribute("aria-label", options.title + " inspect position");
+  inspect.setAttribute("aria-label", plainTitle + " inspect position");
 
   const events = new AbortController();
   const listener = { signal: events.signal };
@@ -55,7 +61,7 @@ export function createScientificPlot(options: ScientificPlotOptions) {
   const screen = canvas.getContext("2d");
   let traces: readonly ScientificTrace[] = [];
   let minX = 0, maxX = 0, low = 0, high = 0;
-  let zoom = 1, pan = 0, cursor = 0, speed = 1;
+  let zoomX = 1, panX = 0, zoomY = 1, panY = 0, cursor = 0, speed = 1;
   let width = 0, height = 0, dpr = 1;
   let hover: number | undefined;
   let crossX = 0, crossY = 0;
@@ -63,8 +69,10 @@ export function createScientificPlot(options: ScientificPlotOptions) {
   let frame = 0, previousTime: number | undefined;
   let colors: string[] = [];
   const left = 66, right = 14, top = 14, bottom = 46;
-  const viewStart = () => minX + (maxX - minX) * pan;
-  const viewSpan = () => (maxX - minX) / zoom;
+  const viewStart = () => minX + (maxX - minX) * panX;
+  const viewSpan = () => (maxX - minX) / zoomX;
+  const viewLow = () => low + (high - low) * panY;
+  const viewHigh = () => viewLow() + (high - low) / zoomY;
 
   function schedule() {
     if (!frame && !disposed && !document.hidden) frame = requestAnimationFrame(render);
@@ -76,15 +84,49 @@ export function createScientificPlot(options: ScientificPlotOptions) {
   }
 
   function bounds() {
-    pan = Math.max(0, Math.min(1 - 1 / zoom, pan));
+    const xExtent = 1 - 1 / zoomX, yExtent = 1 - 1 / zoomY;
+    panX = Math.max(Math.min(0, xExtent), Math.min(Math.max(0, xExtent), panX));
+    panY = Math.max(Math.min(0, yExtent), Math.min(Math.max(0, yExtent), panY));
     invalidate();
   }
 
-  function button(label: string, action: () => void) {
+  function button(label: string, action: () => void, accessibleLabel?: string, parent: HTMLElement = controls) {
     const control = element("button", label);
     control.type = "button";
+    if (accessibleLabel) {
+      control.setAttribute("aria-label", accessibleLabel);
+      control.title = accessibleLabel;
+    }
     control.addEventListener("click", action, listener);
-    controls.append(control);
+    parent.append(control);
+    return control;
+  }
+
+  function zoomButton(label: string, zoomIn: boolean, action: () => void, parent: HTMLElement) {
+    const control = button("", action, label, parent);
+    control.classList.add("plot-zoom-button");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    svg.classList.add("plot-zoom-icon");
+    const circle = document.createElementNS(svg.namespaceURI, "circle");
+    circle.setAttribute("cx", "10");
+    circle.setAttribute("cy", "10");
+    circle.setAttribute("r", "6.5");
+    const handle = document.createElementNS(svg.namespaceURI, "path");
+    handle.setAttribute("d", "m15 15 6 6");
+    const mark = document.createElementNS(svg.namespaceURI, "path");
+    mark.setAttribute("d", zoomIn ? "M7.5 10h5M10 7.5v5" : "M7.5 10h5");
+    for (const shape of [circle, handle, mark]) {
+      shape.setAttribute("fill", "none");
+      shape.setAttribute("stroke", "currentColor");
+      shape.setAttribute("stroke-width", "1.8");
+      shape.setAttribute("stroke-linecap", "round");
+      shape.setAttribute("stroke-linejoin", "round");
+      svg.append(shape);
+    }
+    control.append(svg);
     return control;
   }
 
@@ -115,40 +157,69 @@ export function createScientificPlot(options: ScientificPlotOptions) {
     schedule();
   }
 
-  function changeZoom(multiplier: number) {
-    const center = pan + 0.5 / zoom;
-    zoom = Math.max(1, Math.min(32, zoom * multiplier));
-    pan = center - 0.5 / zoom;
+  function changeZoom(axis: "x" | "y", multiplier: number) {
+    if (axis === "x") {
+      const center = panX + 0.5 / zoomX;
+      zoomX = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomX * multiplier));
+      panX = center - 0.5 / zoomX;
+    } else {
+      const center = panY + 0.5 / zoomY;
+      zoomY = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomY * multiplier));
+      panY = center - 0.5 / zoomY;
+    }
     bounds();
     if (hover !== undefined) showInspection(hover);
   }
 
-  button("Zoom in", () => changeZoom(2));
-  button("Zoom out", () => changeZoom(0.5));
-  function shift(direction: number) {
-    pan += direction * 0.25 / zoom;
-    bounds();
-    if (hover !== undefined) showInspection(hover);
+  function zoomGroup(axis: "X" | "Y") {
+    const group = element("div", undefined, "plot-zoom-group");
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", `${axis}-axis zoom controls`);
+    group.append(element("span", `${axis} axis`, "plot-zoom-label"));
+    controls.append(group);
+    return group;
   }
-  button("Pan left", () => shift(-1));
-  button("Pan right", () => shift(1));
-  button("Reset view", () => { zoom = 1; pan = 0; cursor = 0; bounds(); clearInspection(); });
-  root.append(caption, controls, element("div", options.yLabel, "axis-label"), canvas, inspect, readout);
+
+  const xZoomGroup = zoomGroup("X");
+  const yZoomGroup = zoomGroup("Y");
+  zoomButton("Zoom X in", true, () => changeZoom("x", 2), xZoomGroup);
+  zoomButton("Zoom X out", false, () => changeZoom("x", 0.5), xZoomGroup);
+  zoomButton("Zoom Y in", true, () => changeZoom("y", 2), yZoomGroup);
+  zoomButton("Zoom Y out", false, () => changeZoom("y", 0.5), yZoomGroup);
+  button("Reset view", () => {
+    zoomX = zoomY = 1;
+    panX = panY = 0;
+    cursor = 0;
+    bounds();
+    clearInspection();
+  });
+  root.append(caption, controls, renderMathText(element("div", undefined, "axis-label"), options.yLabel),
+    canvas, inspect, readout);
   updatePlayback();
 
   function showInspection(fraction: number) {
     hover = Math.min(1, Math.max(0, fraction));
     inspect.value = String(Math.round(hover * 1000));
     const target = viewStart() + viewSpan() * hover;
+    readout.replaceChildren();
     const readings = traces.map((trace, series) => {
       const after = Math.min(trace.values.length - 1, lowerBound(trace, target));
       const before = Math.max(0, after - 1);
       const index = Math.abs(xAt(trace, before) - target) < Math.abs(xAt(trace, after) - target) ? before : after;
       if (series === 0) { crossX = xAt(trace, index); crossY = trace.values[index]!; }
-      return `${trace.label}: ${options.xLabel} ${format(xAt(trace, index))}, ${options.yLabel} ${format(trace.values[index]!)}`;
+      const xValue = format(xAt(trace, index));
+      const yValue = format(trace.values[index]!);
+      const reading = element("span", undefined, "plot-reading");
+      reading.append(element("span", trace.label, "plot-reading-label"));
+      for (const [label, value] of [[plainXLabel, xValue], [plainYLabel, yValue]]) {
+        const measurement = element("span", undefined, "plot-reading-measurement");
+        measurement.append(element("span", label, "plot-reading-key"), element("strong", value));
+        reading.append(measurement);
+      }
+      readout.append(reading);
+      return `${trace.label}: ${plainXLabel} ${xValue}, ${plainYLabel} ${yValue}`;
     });
-    readout.textContent = readings.join(" · ");
-    inspect.setAttribute("aria-valuetext", readout.textContent);
+    inspect.setAttribute("aria-valuetext", readings.join(" · "));
     schedule();
   }
 
@@ -176,8 +247,9 @@ export function createScientificPlot(options: ScientificPlotOptions) {
     base.clearRect(0, 0, width, height);
     const css = getComputedStyle(document.documentElement);
     const color = (token: string) => css.getPropertyValue(token).trim();
-    const scale = Math.max(Math.abs(low), high) || 1;
-    const lo = low / scale, hi = high / scale || (low === 0 ? 1 : 0);
+    const visibleLow = viewLow(), visibleHigh = viewHigh();
+    const scale = Math.max(Math.abs(visibleLow), visibleHigh) || 1;
+    const lo = visibleLow / scale, hi = visibleHigh / scale || (visibleLow === 0 ? 1 : 0);
     const y = (value: number) => top + (hi - value / scale) / (hi - lo) * plotHeight;
     const start = viewStart(), span = viewSpan();
     const x = (value: number) => left + (span === 0 ? 0 : (value - start) / span) * plotWidth;
@@ -268,13 +340,16 @@ export function createScientificPlot(options: ScientificPlotOptions) {
       if (fraction >= 0 && fraction <= 1) {
         const color = colors[1] ?? "#a67429";
         drawCursor(screen, fraction, color, plotWidth, plotHeight);
-        const scale = Math.max(Math.abs(low), high) || 1;
-        const lo = low / scale, hi = high / scale || (low === 0 ? 1 : 0);
-        const y = top + (hi - crossY / scale) / (hi - lo) * plotHeight;
-        screen.beginPath();
-        screen.moveTo(left, y);
-        screen.lineTo(left + plotWidth, y);
-        screen.stroke();
+        const visibleLow = viewLow(), visibleHigh = viewHigh();
+        if (crossY >= visibleLow && crossY <= visibleHigh) {
+          const scale = Math.max(Math.abs(visibleLow), visibleHigh) || 1;
+          const lo = visibleLow / scale, hi = visibleHigh / scale || (visibleLow === 0 ? 1 : 0);
+          const y = top + (hi - crossY / scale) / (hi - lo) * plotHeight;
+          screen.beginPath();
+          screen.moveTo(left, y);
+          screen.lineTo(left + plotWidth, y);
+          screen.stroke();
+        }
       }
     }
     if (playing) schedule();
@@ -321,8 +396,9 @@ export function createScientificPlot(options: ScientificPlotOptions) {
           high = Math.max(high, value);
           if (Math.abs(value) > Math.abs(trace.values[peak]!)) peak = i;
         });
-        return `${trace.label} · ${trace.values.length} values · largest absolute value ${format(trace.values[peak]!)} at ${format(xAt(trace, peak))}. ${options.xLabel} / ${options.yLabel}.`;
+        return `${trace.label} · ${trace.values.length} values · largest absolute value ${format(trace.values[peak]!)} at ${format(xAt(trace, peak))}. ${plainXLabel} / ${plainYLabel}.`;
       });
+      if (traces.length && low === high) { low -= 1; high += 1; }
       if (!traces.length) minX = maxX = 0;
       summary.textContent = summaries.join(" ");
       legend.replaceChildren(...traces.map(trace => element("li", trace.label)));

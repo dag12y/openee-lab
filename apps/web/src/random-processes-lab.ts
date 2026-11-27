@@ -331,7 +331,8 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
   const heading = element("header", undefined, "lab-heading random-heading");
   heading.append(element("span", "Chapter 1 · S6", "eyebrow"),
     element("h1", "Random processes"),
-    element("p", "Generate ensembles. Compare statistics, correlation and convergence.", "lede"));
+    element("p", "Parameter changes update the ensemble automatically. Compare statistics, correlation and convergence.",
+      "lede"));
 
   const workspace = element("div", undefined, "random-workspace");
   const visual = element("section", undefined, "random-main");
@@ -392,8 +393,27 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
       addNumberField(spec.key, spec.label, spec.unit, spec.min, spec.max, spec.step, specifics);
   }
   renderSpecifics();
+  const pdfTimeControl = element("div", undefined, "pdf-time-control");
+  const pdfTimeHeading = element("div", undefined, "pdf-time-heading");
+  const pdfTimeLabel = renderMathText(element("label"), "PDF sample \\(n\\)");
+  const pdfTime = element("input");
+  const initialPdfSample = Math.floor(defaultProcessConfig.sampleCount / 2);
+  pdfTime.id = "rp-pdf-time";
+  pdfTime.type = "range";
+  pdfTime.min = "0";
+  pdfTime.max = String(defaultProcessConfig.sampleCount - defaultProcessConfig.lag - 1);
+  pdfTime.value = String(initialPdfSample);
+  pdfTime.setAttribute("aria-label", "PDF sample position");
+  pdfTimeLabel.htmlFor = pdfTime.id;
+  const pdfTimeValue = element("output", `n = ${initialPdfSample}`);
+  const pdfTimeHelp = element("span", "Select n for the first- and second-order PDFs.", "pdf-time-help");
+  pdfTimeHelp.id = "rp-pdf-time-help";
+  pdfTime.setAttribute("aria-describedby", pdfTimeHelp.id);
+  pdfTimeHeading.append(pdfTimeLabel, pdfTimeValue);
+  pdfTimeControl.append(pdfTimeHeading, pdfTime, pdfTimeHelp);
+  sidebar.append(pdfTimeControl);
+
   selector.addEventListener("change", () => {
-    cancelPending();
     if (animationPlaying) setAnimation(false);
     numericInputs.forEach((_, key) => {
       if (!["sampleCount", "realizations", "lag", "seed"].includes(key))
@@ -404,7 +424,7 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
         numericErrors.delete(key);
     });
     renderSpecifics();
-    if (currentAnalysis) status.textContent = "Model changed · Generate to update.";
+    scheduleAnalysis();
   });
 
   const status = element("p", "Ready to generate an ensemble.", "random-status");
@@ -499,19 +519,9 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
   const variancePlot = createPlot("Variance function \\(\\sigma_X^2[n]\\)", "\\(\\sigma_X^2[n]\\)", "Sample n");
   const pdfPlot = createPlot("First-order PDF \\(p_X(x;n)\\)", "\\(p_X(x;n)\\)", "Value x[n]");
   const jointPdf = createScatterPlot("Second-order PDF samples \\((X[n], X[n+\\ell])\\)", "Xₙ", "Xₙ₊ₗ");
-  const pdfTimeControl = element("label", undefined, "pdf-time-control");
-  pdfTimeControl.append(renderMathText(element("span"), "PDF sample \\(n\\)"));
-  const pdfTime = element("input");
-  pdfTime.type = "range";
-  pdfTime.min = "0";
-  pdfTime.max = "319";
-  pdfTime.value = "160";
-  pdfTime.setAttribute("aria-label", "PDF sample position");
-  const pdfTimeValue = element("output", "n = 160");
-  pdfTimeControl.append(pdfTime, pdfTimeValue);
   const statsGrid = element("div", undefined, "random-grid");
   statsGrid.append(meanPlot.root, variancePlot.root, pdfPlot.root, jointPdf.root);
-  panels[1]!.append(pdfTimeControl, statsGrid);
+  panels[1]!.append(statsGrid);
 
   const acfPlot = createPlot("Autocorrelation \\(R_X(\\tau)\\)", "Rₓ(τ)", "Lag τ (samples)");
   const covariancePlot = createPlot("Auto- and cross-covariance \\(C_X, C_{XY}\\)", "Covariance", "Lag τ (samples)");
@@ -579,7 +589,7 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
   reducedMotion.addEventListener("change", motionChanged);
   motionChanged();
 
-  function configFromInputs(): ProcessConfig | undefined {
+  function configFromInputs(focusInvalid = true): ProcessConfig | undefined {
     for (const [key, input] of numericInputs) {
       input.removeAttribute("aria-invalid");
       numericErrors.get(key)!.textContent = "";
@@ -587,7 +597,7 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
         input.setAttribute("aria-invalid", "true");
         numericErrors.get(key)!.textContent = "Enter a finite number.";
         status.textContent = "Check the highlighted parameter.";
-        input.focus();
+        if (focusInvalid) input.focus();
         return;
       }
     }
@@ -625,7 +635,7 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
         const [key, input] = invalid;
         input.setAttribute("aria-invalid", "true");
         numericErrors.get(key)!.textContent = error;
-        input.focus();
+        if (focusInvalid) input.focus();
       }
       return;
     }
@@ -706,7 +716,7 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
     const distributions = distributionsAt(currentAnalysis.paths, index, activeConfig.lag);
     const centers = distributions.meanPdf.centers;
     pdfPlot.setTraces([{
-      label: "Ensemble PDF",
+      label: `Ensemble PDF · n = ${index}`,
       axis: { start: centers[0]!, step: centers[1]! - centers[0]! },
       values: distributions.meanPdf.density, mode: "line",
     }]);
@@ -717,10 +727,9 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
 
   pdfTime.addEventListener("input", updatePdfTime);
 
-  sidebar.addEventListener("submit", event => {
-    event.preventDefault();
-    if (pending) clearTimeout(pending);
-    const config = configFromInputs();
+  function runAnalysis(focusInvalid: boolean) {
+    cancelPending();
+    const config = configFromInputs(focusInvalid);
     if (!config) return;
     if (animationPlaying) setAnimation(false);
     generate.disabled = true;
@@ -732,6 +741,21 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
       showAnalysis(config, analysis);
       generate.disabled = false;
     }, 0);
+  }
+
+  function scheduleAnalysis() {
+    cancelPending();
+    if (!mounted) return;
+    status.textContent = currentAnalysis ? "Parameters changed · Updating…" : "Preparing ensemble…";
+    pending = window.setTimeout(() => {
+      pending = 0;
+      runAnalysis(false);
+    }, 250);
+  }
+
+  sidebar.addEventListener("submit", event => {
+    event.preventDefault();
+    runAnalysis(true);
   });
   reseed.addEventListener("click", () => {
     const input = numericInputs.get("seed")!;
@@ -756,14 +780,7 @@ export function mountRandomProcessesLab(root: HTMLElement): () => void {
     sidebar.requestSubmit();
   });
   sidebar.addEventListener("input", event => {
-    if (event.target instanceof HTMLInputElement) cancelPending();
-    if (event.target instanceof HTMLInputElement && currentAnalysis)
-      status.textContent = "Parameters changed · Generate to update.";
-  });
-  sidebar.addEventListener("change", event => {
-    if (event.target === selector) cancelPending();
-    if (event.target === selector && currentAnalysis)
-      status.textContent = "Model changed · Generate to update.";
+    if (event.target instanceof HTMLInputElement && event.target !== pdfTime) scheduleAnalysis();
   });
 
   sidebar.requestSubmit();

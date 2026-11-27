@@ -231,7 +231,7 @@ test("scope playback moves only the display cursor, pauses, and stops on exit", 
   } finally { await page.close(); }
 });
 
-test("zoom and pan inspect actual coordinates, DPR follows size, and reduced motion disables playback", async () => {
+test("zoom icons expand both axes, DPR follows size, and reduced motion disables playback", async () => {
   const page = await browser.newPage({ viewport: { width: 1100, height: 800 },
     deviceScaleFactor: 2, reducedMotion: "reduce", colorScheme: "dark" });
   try {
@@ -245,25 +245,91 @@ test("zoom and pan inspect actual coordinates, DPR follows size, and reduced mot
       return canvas && canvas.width === Math.round(canvas.getBoundingClientRect().width * 2);
     });
     const initialWidth = await canvas.evaluate(node => node.width);
+    assert.equal(await scope.locator(".plot-zoom-icon").count(), 4);
+    assert.equal(await scope.getByRole("button", { name: /^Pan / }).count(), 0);
+    const xZoomControls = scope.getByRole("group", { name: "X-axis zoom controls" });
+    const yZoomControls = scope.getByRole("group", { name: "Y-axis zoom controls" });
+    assert.equal(await xZoomControls.getByText("X axis", { exact: true }).count(), 1);
+    assert.equal(await yZoomControls.getByText("Y axis", { exact: true }).count(), 1);
+    assert.equal(await xZoomControls.getByRole("button", { name: "Zoom X in" }).count(), 1);
+    assert.equal(await yZoomControls.getByRole("button", { name: "Zoom Y in" }).count(), 1);
     const inspect = scope.getByRole("slider", { name: "Waveform inspect position" });
     await inspect.focus();
     await inspect.press("Home");
-    assert.match(await scope.locator(".plot-readout").innerText(), /Time \(s\) 0, Voltage \(V\) 3/);
-    await scope.getByRole("button", { name: "Zoom in" }).click();
+    assert.match(await inspect.getAttribute("aria-valuetext"), /Time \(s\) 0, Voltage \(V\) 3/);
+    await scope.getByRole("button", { name: "Zoom X in" }).click();
     await inspect.focus();
     await inspect.press("Home");
-    assert.match(await scope.locator(".plot-readout").innerText(), /Time \(s\) 0.02,/);
+    assert.match(await inspect.getAttribute("aria-valuetext"), /Time \(s\) 0.02,/);
+    await scope.getByRole("button", { name: "Zoom X out" }).click();
+    await inspect.focus();
+    await inspect.press("Home");
+    assert.match(await inspect.getAttribute("aria-valuetext"), /Time \(s\) 0,/);
+    await scope.getByRole("button", { name: "Zoom X in" }).click();
     await scope.getByRole("button", { name: "Pan right" }).click();
     await inspect.focus();
     await inspect.press("Home");
-    assert.match(await scope.locator(".plot-readout").innerText(), /Time \(s\) 0.03,/);
+    assert.match(await inspect.getAttribute("aria-valuetext"), /Time \(s\) 0.03,/);
+    await scope.getByRole("button", { name: "Pan left" }).click();
+    await inspect.focus();
+    await inspect.press("Home");
+    assert.match(await inspect.getAttribute("aria-valuetext"), /Time \(s\) 0.02,/);
     await scope.getByRole("button", { name: "Reset view" }).click();
     await inspect.focus();
     await inspect.press("Home");
-    assert.match(await scope.locator(".plot-readout").innerText(), /Time \(s\) 0,/);
+    assert.match(await inspect.getAttribute("aria-valuetext"), /Time \(s\) 0,/);
+    const renderFrame = () => page.evaluate(() => new Promise(resolve =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await inspect.blur();
+    await renderFrame();
+    const initialAxes = await canvas.evaluate(node => node.toDataURL());
+    for (let i = 0; i < 3; i++)
+      await scope.getByRole("button", { name: "Zoom Y out" }).click();
+    await renderFrame();
+    const zoomedOutY = await canvas.evaluate(node => node.toDataURL());
+    assert.notEqual(zoomedOutY, initialAxes);
+    await scope.getByRole("button", { name: "Zoom Y out" }).click();
+    await renderFrame();
+    assert.equal(await canvas.evaluate(node => node.toDataURL()), zoomedOutY);
+    await scope.getByRole("button", { name: "Reset view" }).click();
+    await renderFrame();
+    assert.equal(await canvas.evaluate(node => node.toDataURL()), initialAxes);
+    await scope.getByRole("button", { name: "Zoom Y in" }).click();
+    await renderFrame();
+    const zoomedY = await canvas.evaluate(node => node.toDataURL());
+    assert.notEqual(zoomedY, initialAxes);
+    await scope.getByRole("button", { name: "Zoom Y out" }).click();
+    await renderFrame();
+    assert.equal(await canvas.evaluate(node => node.toDataURL()), initialAxes);
+    for (let i = 0; i < 3; i++)
+      await scope.getByRole("button", { name: "Zoom X out" }).click();
+    await renderFrame();
+    const zoomedOutX = await canvas.evaluate(node => node.toDataURL());
+    assert.notEqual(zoomedOutX, initialAxes);
+    await scope.getByRole("button", { name: "Zoom X out" }).click();
+    await renderFrame();
+    assert.equal(await canvas.evaluate(node => node.toDataURL()), zoomedOutX);
+    await scope.getByRole("button", { name: "Reset view" }).click();
+    await renderFrame();
+    assert.equal(await canvas.evaluate(node => node.toDataURL()), initialAxes);
+    for (let i = 0; i < 5; i++)
+      await scope.getByRole("button", { name: "Zoom X in" }).click();
+    await renderFrame();
+    const zoomedTo32 = await canvas.evaluate(node => node.toDataURL());
+    for (let i = 0; i < 3; i++)
+      await scope.getByRole("button", { name: "Zoom X in" }).click();
+    await renderFrame();
+    const zoomedTo256 = await canvas.evaluate(node => node.toDataURL());
+    assert.notEqual(zoomedTo256, zoomedTo32);
+    await scope.getByRole("button", { name: "Zoom X in" }).click();
+    await renderFrame();
+    assert.equal(await canvas.evaluate(node => node.toDataURL()), zoomedTo256);
+    await scope.getByRole("button", { name: "Reset view" }).click();
+    await renderFrame();
+    assert.equal(await canvas.evaluate(node => node.toDataURL()), initialAxes);
     const spectrumInspect = spectrum.getByRole("slider", { name: "Amplitude spectrum inspect position" });
     await spectrumInspect.fill("200");
-    assert.match(await spectrum.locator(".plot-readout").innerText(), /Frequency \(Hz\) 400, Peak amplitude \(V\) 2/);
+    assert.match(await spectrumInspect.getAttribute("aria-valuetext"), /Frequency \(Hz\) 400, Peak amplitude \(V\) 2/);
     await page.setViewportSize({ width: 375, height: 800 });
     await page.waitForFunction(oldWidth => {
       const canvas = document.querySelector("canvas");
@@ -300,7 +366,7 @@ test("multiple traces use their own coordinates and preserve original buffers", 
     });
     const plot = page.locator("figure").filter({ hasText: "Overlay fixture" });
     await plot.getByRole("slider").fill("200");
-    assert.match(await plot.locator(".plot-readout").innerText(), /Uniform: Time \(s\) 0, V 1 · Explicit: Time \(s\) 0.4, V 20/);
+    assert.match(await plot.getByRole("slider").getAttribute("aria-valuetext"), /Uniform: Time \(s\) 0, V 1 · Explicit: Time \(s\) 0.4, V 20/);
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     assert.deepEqual(await page.evaluate(() => window.verifyFixture()), { hasOverlay: true, a: [1, 2, 3], b: [30, 20, 10] });
   } finally { await page.close(); await dev.close(); }
@@ -311,28 +377,61 @@ test("random-process lab switches models, updates PDFs, and exposes model-based 
   try {
     await page.goto(origin + "/#/labs/random-processes");
     const process = page.getByLabel("Process model");
-    const generate = page.getByRole("button", { name: "Generate ensemble" });
     await page.getByRole("heading", { name: "Random processes" }).waitFor();
     assert.ok(await page.locator(".scientific-plot figcaption .katex").count() >= 1);
     assert.ok(await page.locator(".random-property .katex").count() >= 1);
     await page.getByRole("tab", { name: "Stationarity & ergodicity" }).click();
     await process.selectOption("gaussian");
-    await generate.click();
+    await page.waitForFunction(() => document.querySelector(".random-status")?.textContent?.startsWith("Gaussian process"));
     await page.getByText("NO · model").first().waitFor();
     assert.equal(await page.getByText("PASS · model").count(), 2);
     assert.equal(await page.getByText("ACF ergodicity").count(), 1);
     assert.equal(await page.locator(".random-explanation .katex").count(), 1);
+    const meanConvergence = page.locator("figure").filter({ hasText: "Time mean vs ensemble mean" });
+    const convergenceSlider = meanConvergence.getByRole("slider");
+    const zoomIn = meanConvergence.getByRole("button", { name: "Zoom X in" });
+    assert.equal(await zoomIn.locator(".plot-zoom-icon").count(), 1);
+    assert.equal(await meanConvergence.getByRole("button", { name: /^Pan / }).count(), 0);
+    const xZoomControls = meanConvergence.getByRole("group", { name: "X-axis zoom controls" });
+    const yZoomControls = meanConvergence.getByRole("group", { name: "Y-axis zoom controls" });
+    assert.equal(await xZoomControls.getByText("X axis", { exact: true }).count(), 1);
+    assert.equal(await yZoomControls.getByText("Y axis", { exact: true }).count(), 1);
+    await convergenceSlider.fill("800");
+    assert.equal(await meanConvergence.locator(".plot-reading").count(), 2);
+    assert.equal(await meanConvergence.locator(".plot-reading-label").count(), 2);
+    assert.match(await meanConvergence.locator(".plot-readout").innerText(), /Prefix length \(samples\).*Mean x/s);
 
     await process.selectOption("poisson");
-    await generate.click();
+    await page.waitForFunction(() => document.querySelector(".random-status")?.textContent?.startsWith("Poisson process"));
     await page.getByText("N/A · nonstationary").first().waitFor();
     assert.equal(await page.getByText("FAIL · model").count(), 2);
 
     await page.getByRole("tab", { name: "Statistics" }).click();
     const inspectLabel = await page.locator(".scientific-plot input[type=range]").first().getAttribute("aria-label");
     assert.doesNotMatch(inspectLabel, /\\[a-z]/i);
-    await page.getByLabel("PDF sample position").fill("40");
+    const pdf = page.locator("figure").filter({ hasText: "First-order PDF" });
+    const pdfCanvas = pdf.locator("canvas");
+    const jointCanvas = page.locator(".random-scatter canvas");
+    await page.waitForFunction(() => {
+      const pdf = Array.from(document.querySelectorAll("figure"))
+        .find(figure => figure.textContent?.includes("First-order PDF"));
+      return (pdf?.querySelector("canvas")?.width ?? 0) > 0 &&
+        (document.querySelector(".random-scatter canvas")?.width ?? 0) > 0;
+    });
+    const initialPdf = await pdfCanvas.evaluate(canvas => canvas.toDataURL());
+    const initialJoint = await jointCanvas.evaluate(canvas => canvas.toDataURL());
+    const analysisStatus = await page.locator(".random-status").innerText();
+    const pdfTime = page.locator(".random-sidebar").getByLabel("PDF sample position");
+    assert.equal(await page.locator(".random-panel").getByLabel("PDF sample position").count(), 0);
+    await pdfTime.fill("40");
+    await pdf.locator(".plot-legend").getByText("Ensemble PDF · n = 40", { exact: true }).waitFor();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.waitForTimeout(300);
     assert.equal(await page.locator("output").innerText(), "n = 40");
+    assert.equal(await pdfTime.inputValue(), "40");
+    assert.equal(await page.locator(".random-status").innerText(), analysisStatus);
+    assert.notEqual(await pdfCanvas.evaluate(canvas => canvas.toDataURL()), initialPdf);
+    assert.notEqual(await jointCanvas.evaluate(canvas => canvas.toDataURL()), initialJoint);
     assert.equal(await page.locator(".random-heatmap").count(), 0);
     assert.equal(await page.locator(".random-scatter").count(), 1);
 
@@ -340,8 +439,7 @@ test("random-process lab switches models, updates PDFs, and exposes model-based 
     assert.equal(await page.getByLabel("Transition probability p00").count(), 1);
     assert.equal(await page.getByLabel("Transition probability p11").count(), 1);
     await page.getByRole("tab", { name: "Stationarity & ergodicity" }).click();
-    await generate.click();
-    await page.getByText(/Markov chain.*24 paths/).waitFor();
+    await page.waitForFunction(() => document.querySelector(".random-status")?.textContent?.startsWith("Markov chain"));
     assert.equal(await page.getByText("PASS · model").count(), 2);
     await page.getByRole("button", { name: "Reset", exact: true }).click();
     await page.getByLabel("Amplitude").waitFor();
@@ -350,14 +448,28 @@ test("random-process lab switches models, updates PDFs, and exposes model-based 
     assert.equal(await page.getByLabel("Correlation lag ℓ").inputValue(), "8");
     assert.equal(await page.getByLabel("Amplitude").count(), 1);
     await samples.fill("128");
+    await page.waitForFunction(() => document.querySelector(".random-status")?.textContent?.includes("128 samples"));
     const lag = page.getByLabel("Correlation lag ℓ");
     await lag.fill("33");
-    await generate.click();
-    assert.equal(await lag.getAttribute("aria-invalid"), "true");
+    await page.waitForFunction(() => document.querySelector("#rp-lag")?.getAttribute("aria-invalid") === "true");
     assert.match(await page.getByRole("status").innerText(), /Lag must be/);
     await page.getByRole("button", { name: "Reset", exact: true }).click();
 
+    await page.setViewportSize({ width: 1200, height: 600 });
+    const sidebar = page.locator(".random-sidebar");
+    const desktopScroll = await sidebar.evaluate(node => ({
+      overflowY: getComputedStyle(node).overflowY,
+      scrollHeight: node.scrollHeight,
+      clientHeight: node.clientHeight,
+    }));
+    assert.equal(desktopScroll.overflowY, "auto");
+    assert.ok(desktopScroll.scrollHeight > desktopScroll.clientHeight);
+    await sidebar.evaluate(node => { node.scrollTop = 0; });
+    await sidebar.getByLabel("PDF sample position").scrollIntoViewIfNeeded();
+    assert.ok(await sidebar.evaluate(node => node.scrollTop > 0));
+
     await page.setViewportSize({ width: 375, height: 800 });
+    assert.equal(await sidebar.evaluate(node => getComputedStyle(node).overflowY), "visible");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   } finally { await page.close(); }
 });

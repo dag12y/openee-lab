@@ -1,4 +1,5 @@
 import { element } from "./ui";
+import { attachClickZoomGuard } from "./zoom-guard";
 
 /** The producer owns finite samples and ascending coordinates with matching lengths.
  * Keep these buffers unchanged while the plot uses them.
@@ -76,7 +77,6 @@ export function createScientificPlot(options: ScientificPlotOptions) {
   }
 
   function bounds() {
-    pan = Math.max(0, Math.min(1 - 1 / zoom, pan));
     invalidate();
   }
 
@@ -115,10 +115,10 @@ export function createScientificPlot(options: ScientificPlotOptions) {
     schedule();
   }
 
-  function changeZoom(multiplier: number) {
-    const center = pan + 0.5 / zoom;
-    zoom = Math.max(1, Math.min(32, zoom * multiplier));
-    pan = center - 0.5 / zoom;
+  function changeZoom(multiplier: number, anchorFrac = 0.5) {
+    const anchorPan = pan + anchorFrac / zoom;
+    zoom = Math.max(0.25, Math.min(64, zoom * multiplier));
+    pan = anchorPan - anchorFrac / zoom;
     bounds();
     if (hover !== undefined) showInspection(hover);
   }
@@ -158,11 +158,40 @@ export function createScientificPlot(options: ScientificPlotOptions) {
     readout.textContent = "Move over the chart or use Inspect position.";
     schedule();
   }
+  let dragPanning = false;
+  let dragStartX = 0;
+  let dragStartPan = 0;
+
+  canvas.addEventListener("pointerdown", e => {
+    dragPanning = true;
+    dragStartX = e.clientX;
+    dragStartPan = pan;
+    canvas.setPointerCapture(e.pointerId);
+  }, listener);
   canvas.addEventListener("pointermove", e => {
     const rect = canvas.getBoundingClientRect();
-    if (width > left + right) showInspection((e.clientX - rect.left - left) / (width - left - right));
+    const plotW = Math.max(1, width - left - right);
+    if (dragPanning) {
+      const dx = e.clientX - dragStartX;
+      pan = dragStartPan - (dx / plotW) / zoom;
+      bounds();
+      return;
+    }
+    if (width > left + right) showInspection((e.clientX - rect.left - left) / plotW);
   }, listener);
+  const zoomGuard = attachClickZoomGuard(canvas, { signal: events.signal });
+  canvas.addEventListener("pointerup", () => { dragPanning = false; }, listener);
+  canvas.addEventListener("pointercancel", () => { dragPanning = false; }, listener);
+  canvas.addEventListener("wheel", e => {
+    if (!zoomGuard.isActive()) return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const plotW = Math.max(1, width - left - right);
+    const frac = Math.min(1, Math.max(0, (e.clientX - rect.left - left) / plotW));
+    changeZoom(e.deltaY < 0 ? 1.25 : 0.8, frac);
+  }, { passive: false, signal: events.signal });
   canvas.addEventListener("pointerleave", () => {
+    if (dragPanning) return;
     if (document.activeElement === inspect) showInspection(Number(inspect.value) / 1000);
     else clearInspection();
   }, listener);

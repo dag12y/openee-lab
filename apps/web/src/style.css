@@ -86,3 +86,108 @@ canvas { display: block; width: 100%; height: auto; }
 .plot-legend li:nth-child(even)::before { border-top-style: dashed; }
 .scientific-plot input[type=range] { width: 100%; accent-color: var(--action); }
 .plot-readout { font-size: .8rem; color: var(--muted); min-height: 1.5em; }
+.s3-heading { padding: 1rem 0 .75rem; }
+.s3-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.s3-tab { font-weight: 650; white-space: nowrap; }
+.s3-tab.active, .plot-controls button.active, .s3-seg-tabs button.active, .s3-cont-row button.active, .s3-chip.active, .s3-keypad-toggle.active, .s3-keypad-tab.active {
+  background: var(--action); color: var(--on-action); border-color: var(--action);
+}
+.s3-section { display: grid; gap: var(--gap); }
+.s3-workspace { grid-template-columns: minmax(255px, 315px) minmax(0, 1fr); }
+.s3-tf-workspace { grid-template-columns: minmax(305px, 395px) minmax(0, 1fr); }
+.s3-dual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); align-items: start; }
+.s3-side-card { display: grid; gap: .6rem; }
+.s3-card-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.s3-control-group { display: grid; gap: .55rem; align-content: start; }
+.s3-select, .s3-text-input { width: 100%; font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: 7px; padding: .42rem .55rem; }
+
+/* Function Input Studio */
+.s3-studio { display: grid; gap: .85rem; }
+.s3-studio-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .65rem; border-bottom: 1px solid var(--border); padding-bottom: .65rem; }
+.s3-studio-title { display: grid; gap: .15rem; }
+.s3-region-meta { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.s3-studio-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.s3-seg-tabs { display: inline-flex; flex-wrap: wrap; gap: .25rem; background: var(--raised); padding: .2rem; border-radius: 8px; border: 1px solid var(--border); }
+.s3-seg-tabs button { border: none; background: transparent; padding: .32rem .65rem; font-size: .84rem; border-radius: 6px; white-space: nowrap; }
+.s3-keypad-toggle { font-size: .84rem; padding: .38rem .75rem; font-weight: 600; white-space: nowrap; }
+.s3-studio-grid { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.15fr); gap: 1rem; align-items: stretch; }
+.s3-studio-left { display: grid; gap: .65rem; align-content: start; }
+.s3-studio-right { display: grid; gap: .45rem; align-content: start; }
+.s3-subpanel { display: grid; gap: .5rem; }
+.s3-expr-bar { display: flex; align-items: center; gap: .4rem; background: var(--raised); border: 1px solid var(--border); border-radius: 8px; padding: .3rem .55rem; }
+.s3-expr-prefix { font-family: ui-monospace, monospace; font-weight: 650; color: var(--muted); white-space: nowrap; }
+.s3-expr-input { flex: 1; min-width: 0; border: none; background: transparent; color: var(--ink); font: inherit; font-family: ui-monospace, monospace; padding: .2rem .25rem; }
+.s3-expr-input::placeholder { color: var(--muted); opacity: 0.72; }
+.s3-expr-input:focus { outline: none; }
+.s3-valid-mark { font-weight: 700; font-size: .85rem; }
+.s3-valid-mark.ok { color: var(--action); }
+.s3-valid-mark.err { color: var(--error); }
+.s3-clear-btn { font-size: .78rem; padding: .2rem .45rem; white-space: nowrap; }
+.s3-formula-preview { min-height: 2rem; padding: .35rem .6rem; background: var(--raised); border: 1px solid var(--border); border-radius: 7px; overflow-x: auto; }
+.s3-inline-err { margin: 0; font-size: .82rem; color: var(--error); }
+.s3-inline-err:empty { display: none; }
+.s3-chip-row { display: flex; flex-wrap: wrap; gap: .32rem; }
+.s3-chip { font-size: .8rem; padding: .24rem .55rem; border-radius: 6px; white-space: nowrap; }
+.s3-param-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: .5rem; }
+.s3-compact-field { margin-top: 0; }
+.s3-region-box { display: grid; gap: .5rem; padding-top: .5rem; border-top: 1px solid var(--border); }
+.s3-cont-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .35rem; }
+.s3-cont-row button { font-size: .8rem; padding: .35rem .45rem; white-space: nowrap; }
+
+.s3-canvas-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .4rem; font-size: .9rem; }
+.s3-mini-nav { margin: 0; }
+.s3-mini-nav button { padding: .18rem .48rem; font-size: .78rem; white-space: nowrap; }
+.s3-region-canvas { width: 100%; height: 250px; background: var(--raised); border: 1px solid var(--border); border-radius: 8px; touch-action: none; }
+.s3-epi-series-canvas { width: 100%; height: auto; aspect-ratio: 560 / 300; background: var(--raised); border: 1px solid var(--border); border-radius: 8px; }
+.s3-phasor-slider { display: inline-flex; align-items: center; gap: .45rem; flex: 1 1 170px; min-width: 145px; }
+.s3-phasor-slider input[type=range] { flex: 1; min-width: 80px; accent-color: var(--action); }
+.s3-inline-label { font-size: .8rem; color: var(--muted); display: inline-flex; align-items: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Categorized Math Keypad */
+.s3-keypad { background: var(--raised); border: 1px solid var(--border); border-radius: 8px; padding: .5rem; display: grid; gap: .45rem; }
+.s3-keypad-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: .25rem; }
+.s3-keypad-tabs { display: flex; flex-wrap: wrap; gap: .25rem; padding-top: .35rem; border-top: 1px solid var(--border); }
+.s3-keypad-tab { font-size: .74rem; padding: .22rem .5rem; border-radius: 5px; background: var(--panel); white-space: nowrap; }
+.s3-keypad-cat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .28rem; }
+.s3-key { padding: .32rem .15rem; font-size: .78rem; text-align: center; background: var(--panel); border-radius: 5px; white-space: nowrap; }
+.s3-fn-key { padding: .34rem .35rem; font-size: .82rem; }
+.s3-key-num { font-weight: 650; }
+.s3-key-op { color: var(--action); font-weight: 650; }
+.s3-key-fn { font-weight: 550; }
+.s3-key-act { color: var(--muted); font-size: .74rem; }
+
+/* Piecewise, LaTeX & Metrics */
+.s3-seg-list { display: grid; gap: .4rem; margin: .25rem 0; }
+.s3-seg-row { display: grid; grid-template-columns: 58px auto 58px 1fr auto; gap: .25rem; align-items: center; }
+.s3-seg-row input { min-width: 0; font: inherit; font-size: .85rem; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: 6px; padding: .28rem .35rem; }
+.s3-seg-row span { font-size: .78rem; color: var(--muted); }
+.s3-latex-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+.s3-inspect-inline { display: inline-flex; align-items: center; gap: .35rem; font-size: .84rem; color: var(--muted); }
+.s3-inspect-inline input { width: 68px; font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: 6px; padding: .22rem .4rem; }
+.s3-math-block { overflow-x: auto; padding: .55rem .75rem; background: var(--raised); border: 1px solid var(--border); border-radius: 8px; margin-top: .5rem; }
+.s3-math-hero { font-size: 1.08rem; }
+.s3-metrics-list { display: grid; gap: .35rem; padding-top: .5rem; border-top: 1px solid var(--border); font-size: .86rem; }
+.s3-metric-row { display: flex; justify-content: space-between; align-items: center; gap: .5rem; font-variant-numeric: tabular-nums; }
+.epicycles-canvas { width: 100%; height: auto; aspect-ratio: 640 / 460; background: var(--raised); border: 1px solid var(--border); border-radius: 8px; touch-action: none; }
+.desmos-plot canvas { cursor: grab; touch-action: none; border-radius: 6px; }
+.desmos-plot canvas:active { cursor: grabbing; }
+.s3-zoom-active { outline: 2px solid var(--action); outline-offset: 2px; }
+
+/* Show Math step-by-step derivation cards */
+.s3-steps-list { display: grid; gap: .55rem; margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--border); }
+.s3-step-item { background: var(--raised); border: 1px solid var(--border); border-left: 3px solid var(--action); border-radius: 8px; padding: .5rem .7rem; display: grid; gap: .25rem; }
+.s3-step-title { font-size: .82rem; font-weight: 650; color: var(--action); }
+.s3-step-note { font-size: .83rem; line-height: 1.45; color: var(--muted); margin: 0; }
+.s3-step-math { overflow-x: auto; font-size: .95rem; }
+
+/* Harmonic Spectrum tabular view */
+.s3-spec-table-wrap { max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); margin-top: .4rem; }
+.s3-spec-table { width: 100%; border-collapse: collapse; font-size: .82rem; font-variant-numeric: tabular-nums; text-align: right; }
+.s3-spec-table th, .s3-spec-table td { padding: .35rem .55rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.s3-spec-table th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 650; text-align: right; }
+.s3-spec-table th:first-child, .s3-spec-table td:first-child { text-align: center; }
+
+@media (max-width: 860px) {
+  .s3-workspace, .s3-tf-workspace, .s3-studio-grid, .s3-dual-grid { grid-template-columns: minmax(0, 1fr); }
+  .s3-keypad-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
